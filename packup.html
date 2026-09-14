@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="PackUp" />
+<meta name="theme-color" content="#E3D6BB" />
+<title>PackUp</title>
+<style>
+  :root{
+    --kraft:#E3D6BB; --kraftDeep:#D3C09C; --kraftLight:#EFE6D2;
+    --ink:#17150F; --ink60:#5C5647; --line:#B9A67E;
+    --tape:#F0821E; --tapeDeep:#C4630D; --stamp:#1F4D46; --void:#8C3A22;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--kraft);color:var(--ink);font-family:var(--sans)}
+  body{min-height:100vh;min-height:100dvh}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,textarea,select{font-family:var(--mono);font-size:14px;width:100%;
+    padding:12px;border:1px solid var(--line);background:var(--kraftLight);color:var(--ink);outline:none}
+  textarea{resize:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--ink)}
+  .tape{height:6px;background:var(--tape)}
+  .wrap{max-width:520px;margin:0 auto}
+  .pad{padding:20px}
+  .mono{font-family:var(--mono)}
+  .label{font-family:var(--mono);color:var(--ink60);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .card{background:var(--kraftLight);border:1px solid var(--line)}
+  .row{display:flex;gap:8px}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .chip{padding:8px 12px;border:1px solid var(--line);font-family:var(--mono);font-size:12px;letter-spacing:.06em;background:transparent;color:var(--ink)}
+  .chip.on{color:var(--kraftLight)}
+  .btn{padding:14px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-primary{background:var(--tape);color:var(--ink)}
+  .btn-dark{background:var(--ink);color:var(--kraft)}
+  .btn-ghost{border:1px solid var(--line)}
+  .btn:disabled{background:var(--kraftDeep);cursor:not-allowed}
+  .hidden{display:none!important}
+  .stack>*+*{margin-top:12px}
+  .stack5>*+*{margin-top:20px}
+  h1{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .muted{color:var(--ink60)}
+  a{color:var(--tapeDeep)}
+  .bar{height:16px;background:var(--kraftDeep)}
+  .bar>span{display:block;height:100%}
+  /* nav */
+  nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--kraftLight);border-top:2px solid var(--ink);z-index:20}
+  nav .wrap{width:100%;display:flex}
+  nav button{flex:1;padding:12px 0 calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ink60)}
+  nav button .ic{width:20px;height:20px}
+  nav button span{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+  nav button.on{background:var(--tape);color:var(--ink)}
+  header{display:flex;align-items:flex-end;justify-content:space-between;padding:20px 20px 16px;border-bottom:1px solid var(--line)}
+  main{padding:20px;padding-bottom:120px}
+  .toast{position:fixed;left:0;right:0;bottom:88px;display:flex;justify-content:center;pointer-events:none;z-index:30}
+  .toast>div{background:var(--ink);color:var(--kraftLight);font-family:var(--mono);font-size:12px;padding:10px 16px;max-width:90%}
+  .stagetag{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--kraftLight);padding:4px 8px;display:inline-block}
+  .leadrow{display:flex;gap:12px;align-items:center;background:var(--kraftLight);border:1px solid var(--line);padding:12px;text-align:left;width:100%}
+  .leadrow .edge{width:4px;align-self:stretch}
+  .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:sp 0.8s linear infinite;margin:40px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .ticket{background:var(--kraftLight);border:2px solid var(--ink)}
+  .ticket .head{background:var(--ink);color:var(--kraft);padding:8px 16px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+  input[type=range]{accent-color:var(--tape);padding:0}
+  .err{color:var(--void);font-size:13px}
+  .ok{color:var(--stamp);font-size:13px;display:flex;align-items:center;gap:6px}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="tape"></div>
+<div id="app" class="wrap"></div>
+<div class="toast hidden" id="toast"><div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   PackUp — moving lead desk, wired to Supabase
+============================================================ */
+const SB_URL = "https://hkysddnwwdrabfakmmdk.supabase.co";
+const SB_KEY = "sb_publishable_fbJw86MrQjxIFb-0-lTMKw_9cWDWheP";
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+/* ---- domain tables (mirror the app's options) ---- */
+const SIZES = {
+  studio:{label:"Studio",crew:2,hours:3,lbs:1800},
+  br1:{label:"1 bedroom",crew:2,hours:4,lbs:2600},
+  br2:{label:"2 bedroom",crew:3,hours:6,lbs:4500},
+  br3:{label:"3 bedroom",crew:4,hours:8,lbs:7500},
+  br4:{label:"4+ bedroom",crew:5,hours:10,lbs:11000},
+};
+const ACCESS = {
+  ground:{label:"Ground floor",mult:1.0},
+  oneFlight:{label:"One flight",mult:1.12},
+  twoPlus:{label:"Two+ flights",mult:1.24},
+  elevator:{label:"Elevator",mult:1.15},
+};
+const SOURCES = ["Google","Yelp","Referral","Facebook","Yard sign","Repeat","Other"];
+const STAGES = ["new","quoted","booked","lost"];
+const STAGE_COLOR = {new:"#F0821E",quoted:"#17150F",booked:"#1F4D46",lost:"#8C3A22"};
+
+/* ---- state ---- */
+let session = null;
+let settings = null;
+let leads = [];
+let tab = "board";
+let openLeadId = null;
+
+/* ---- helpers ---- */
+const $ = (id) => document.getElementById(id);
+const app = $("app");
+const esc = (s) => String(s==null?"":s).replace(/[&<>"']/g, m => (
+  {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const money = (n) => "$" + Math.round(n||0).toLocaleString();
+let toastT;
+function toast(msg){
+  const t = $("toast"); t.querySelector("div").textContent = msg;
+  t.classList.remove("hidden"); clearTimeout(toastT);
+  toastT = setTimeout(()=>t.classList.add("hidden"), 2600);
+}
+
+/* ---- contact field guards ---- */
+// both optional; only flag when something's clearly wrong
+function contactError(phone, email){
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    return "That email doesn't look right — check for a typo.";
+  if(phone){
+    const digits = (phone.match(/\d/g)||[]).length;
+    if(/[^\d\s()+.\-]/.test(phone)) return "Phone should be digits only (no letters).";
+    if(digits < 7) return "That phone number looks too short.";
+  }
+  return null;
+}
+function markBad(el, ids){ ids.forEach(id=>{ const n=el.querySelector(id); if(n) n.style.borderColor="var(--void)"; }); }
+function clearBad(el, ids){ ids.forEach(id=>{ const n=el.querySelector(id); if(n) n.style.borderColor=""; }); }
+
+/* ---- pricing (client-side, same math as the original) ---- */
+function estimate(input, s){
+  const size = SIZES[input.home_size]; if(!size) return null;
+  const access = ACCESS[input.access] || ACCESS.ground;
+  const miles = Number(input.miles)||0;
+  let base = 0; const lines = [];
+  if(input.move_type === "local"){
+    const hrs = size.hours * access.mult * (input.packing?1.35:1);
+    const labor = size.crew * s.hourly_per_mover * hrs;
+    lines.push([`${size.crew} movers × ${hrs.toFixed(1)} hrs`, labor]);
+    const drive = Number(s.travel_fee) + (miles>30 ? (miles-30)*2.5 : 0);
+    lines.push(["Truck & travel", drive]);
+    base = labor + drive;
+    if(input.packing){ const mat = Math.round(size.lbs*0.06); lines.push(["Boxes & materials", mat]); base+=mat; }
+  } else {
+    const perLb = Number(s.long_haul_base) + miles*0.0009;
+    const haul = size.lbs*perLb*access.mult;
+    lines.push([`${size.lbs.toLocaleString()} lbs × ${miles} mi`, haul]);
+    base = haul;
+    if(input.packing){ const pack = size.lbs*0.3; lines.push(["Full packing service", pack]); base+=pack; }
+    const fuel = base*0.08; lines.push(["Fuel surcharge", fuel]); base+=fuel;
+  }
+  const r = (n)=>Math.round(n/25)*25;
+  return { low:r(base*0.9), high:r(base*1.12), lbs:size.lbs, crew:size.crew,
+    lines:lines.map(([l,v])=>[l,Math.round(v)]) };
+}
+
+/* ============================================================
+   DATA LAYER
+============================================================ */
+async function loadAll(){
+  const [{data:st}, {data:ld, error}] = await Promise.all([
+    sb.from("company_settings").select("*").maybeSingle(),
+    sb.from("leads").select("*").order("created_at",{ascending:false}),
+  ]);
+  if(error) console.warn(error);
+  settings = st || { company:"My Moving Co", phone:"", hourly_per_mover:62,
+    travel_fee:95, long_haul_base:0.35, areas:[] };
+  leads = ld || [];
+}
+async function createLead(row){
+  const { data, error } = await sb.from("leads").insert(row).select().single();
+  if(error){ toast(error.message); return null; }
+  leads.unshift(data); return data;
+}
+async function patchLead(id, patch){
+  const { data, error } = await sb.from("leads").update(patch).eq("id",id).select().single();
+  if(error){ toast(error.message); return; }
+  const i = leads.findIndex(l=>l.id===id); if(i>-1) leads[i]=data;
+}
+async function removeLead(id){
+  const { error } = await sb.from("leads").delete().eq("id",id);
+  if(error){ toast(error.message); return; }
+  leads = leads.filter(l=>l.id!==id);
+}
+async function saveSettings(patch){
+  Object.assign(settings, patch);
+  const { error } = await sb.from("company_settings")
+    .update(patch).eq("owner", session.user.id);
+  if(error) toast(error.message);
+}
+
+/* ============================================================
+   AUTH SCREEN
+============================================================ */
+function renderAuth(){
+  document.body.querySelector("main")?.remove();
+  app.innerHTML = `
+    <header><div>
+      <h1>Pack<span style="color:var(--tapeDeep)">Up</span></h1>
+      <div class="label" style="margin-top:4px">Moving lead desk</div>
+    </div></header>
+    <main class="stack5">
+      <div class="card pad stack" style="margin-top:8px">
+        <div class="label" id="authTitle">Sign in</div>
+        <div>
+          <div class="label">Email</div>
+          <input id="email" type="email" autocomplete="username" placeholder="you@example.com" />
+        </div>
+        <div>
+          <div class="label">Password</div>
+          <input id="pw" type="password" autocomplete="current-password" placeholder="At least 6 characters" />
+        </div>
+        <button class="btn btn-primary" id="goBtn">SIGN IN</button>
+        <button class="btn btn-ghost" id="toggleBtn">CREATE AN ACCOUNT INSTEAD</button>
+        <div id="authMsg" class="err hidden"></div>
+      </div>
+      <p class="muted" style="font-size:12px;padding:0 4px">
+        Your leads are private to this login. Nobody else can see them.
+      </p>
+    </main>`;
+
+  let mode = "in";
+  const msg = $("authMsg");
+  const showMsg = (t, ok) => { msg.textContent=t; msg.className = ok?"ok":"err"; msg.classList.remove("hidden"); };
+
+  $("toggleBtn").onclick = () => {
+    mode = mode==="in" ? "up" : "in";
+    $("authTitle").textContent = mode==="in" ? "Sign in" : "Create account";
+    $("goBtn").textContent = mode==="in" ? "SIGN IN" : "CREATE ACCOUNT";
+    $("toggleBtn").textContent = mode==="in" ? "CREATE AN ACCOUNT INSTEAD" : "I ALREADY HAVE AN ACCOUNT";
+    $("pw").setAttribute("autocomplete", mode==="in"?"current-password":"new-password");
+    msg.classList.add("hidden");
+  };
+
+  $("goBtn").onclick = async () => {
+    const email = $("email").value.trim();
+    const password = $("pw").value;
+    if(!email || password.length<6){ showMsg("Enter an email and a password of 6+ characters."); return; }
+    $("goBtn").disabled = true; $("goBtn").textContent = "…";
+    try{
+      if(mode==="in"){
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if(error){ showMsg(error.message); return; }
+      } else {
+        const { data, error } = await sb.auth.signUp({ email, password });
+        if(error){ showMsg(error.message); return; }
+        if(!data.session){
+          showMsg("Account made, but email confirmation is on. Confirm the link in your inbox, or turn off \"Confirm email\" in Supabase → Authentication → Providers, then sign in.", true);
+          return;
+        }
+      }
+      // onAuthStateChange handles the rest
+    } finally {
+      $("goBtn").disabled = false;
+      $("goBtn").textContent = mode==="in" ? "SIGN IN" : "CREATE ACCOUNT";
+    }
+  };
+}
+
+/* ============================================================
+   MAIN SHELL
+============================================================ */
+function renderShell(){
+  app.innerHTML = `
+    <header>
+      <div>
+        <h1>Pack<span style="color:var(--tapeDeep)">Up</span></h1>
+        <div class="label" id="coName" style="margin-top:4px"></div>
+      </div>
+      <button id="signout" class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--ink60)">SIGN OUT</button>
+    </header>
+    <main id="view"></main>
+    <nav><div class="wrap">
+      ${navBtn("board","Board")}
+      ${navBtn("leads","Leads")}
+      ${navBtn("quote","Quote")}
+      ${navBtn("setup","Setup")}
+    </div></nav>`;
+  $("coName").textContent = settings.company || "My Moving Co";
+  $("signout").onclick = async () => { await sb.auth.signOut(); };
+  document.querySelectorAll("nav button").forEach(b=>{
+    b.onclick = () => { openLeadId=null; tab=b.dataset.tab; renderView(); syncNav(); };
+  });
+  renderView(); syncNav();
+}
+function navBtn(k,label){
+  return `<button data-tab="${k}"><div class="ic">${ICON[k]}</div><span>${label}</span></button>`;
+}
+function syncNav(){
+  document.querySelectorAll("nav button").forEach(b=>{
+    b.classList.toggle("on", b.dataset.tab===tab && !openLeadId);
+  });
+}
+
+function renderView(){
+  const v = $("view");
+  if(openLeadId){ v.innerHTML=""; v.appendChild(leadDetail(openLeadId)); return; }
+  if(tab==="board"){
+    v.innerHTML = board();
+    const r = $("recent");
+    if(r) leads.slice(0,3).forEach(l=>r.appendChild(leadRowEl(l)));
+  }
+  else if(tab==="leads"){ v.innerHTML=""; v.appendChild(leadList()); }
+  else if(tab==="quote"){ v.innerHTML=""; v.appendChild(quoteTool()); }
+  else if(tab==="setup"){ v.innerHTML=""; v.appendChild(setupView()); }
+}
+
+/* ============================================================
+   BOARD
+============================================================ */
+function board(){
+  if(!leads.length){
+    return `<div class="card pad" style="text-align:center">
+      <p style="font-size:15px;margin-bottom:4px">No leads yet.</p>
+      <p class="muted" style="font-size:13px;margin-bottom:16px">Price a job on the Quote tab and save it — it lands here.</p>
+      <button class="btn btn-primary" onclick="go('quote')">BUILD A QUOTE</button>
+    </div>`;
+  }
+  const c = STAGES.reduce((a,s)=>(a[s]=leads.filter(l=>l.stage===s).length,a),{});
+  const pipeline = leads.filter(l=>["new","quoted"].includes(l.stage)).reduce((a,l)=>a+(l.quote_low||0),0);
+  const booked = leads.filter(l=>l.stage==="booked").reduce((a,l)=>a+(l.quote_low||0),0);
+  const closed = c.booked + c.lost;
+  const rate = closed ? Math.round(c.booked/closed*100) : 0;
+  const areas={}; leads.forEach(l=>{ if(l.area) areas[l.area]=(areas[l.area]||0)+1; });
+  const topAreas = Object.entries(areas).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxArea = topAreas.length?topAreas[0][1]:1;
+  const srcs={}; leads.forEach(l=>{ if(l.source) srcs[l.source]=(srcs[l.source]||0)+1; });
+  const topSrc = Object.entries(srcs).sort((a,b)=>b[1]-a[1]).slice(0,4);
+
+  return `<div class="stack5">
+    <div class="grid2">
+      <div class="card pad">
+        <div class="label">Open pipeline</div>
+        <div class="mono" style="font-size:24px;font-weight:700">${money(pipeline)}</div>
+        <div class="mono muted" style="font-size:10px">${c.new+c.quoted} jobs unclosed</div>
+      </div>
+      <div class="card pad">
+        <div class="label">Booked</div>
+        <div class="mono" style="font-size:24px;font-weight:700;color:var(--stamp)">${money(booked)}</div>
+        <div class="mono muted" style="font-size:10px">${rate}% close rate</div>
+      </div>
+    </div>
+    <div class="card pad">
+      <div class="label">Stages</div>
+      <div class="stack" style="--s:8px">
+        ${STAGES.map(s=>`<div class="row" style="align-items:center">
+          <div class="mono muted" style="font-size:10px;width:54px;text-transform:uppercase">${s}</div>
+          <div class="bar" style="flex:1"><span style="width:${leads.length?c[s]/leads.length*100:0}%;background:${STAGE_COLOR[s]}"></span></div>
+          <div class="mono" style="font-size:12px;width:18px;text-align:right">${c[s]}</div>
+        </div>`).join("")}
+      </div>
+    </div>
+    <div class="card pad">
+      <div class="label">Where the work is</div>
+      <div class="stack" style="--s:8px">
+        ${topAreas.map(([a,n])=>`<div class="row" style="align-items:center">
+          <div style="flex:1;font-size:13px">${esc(a)}</div>
+          <div class="bar" style="width:96px;height:12px"><span style="width:${n/maxArea*100}%;background:var(--tape)"></span></div>
+          <div class="mono" style="font-size:11px;width:14px;text-align:right">${n}</div>
+        </div>`).join("")}
+      </div>
+    </div>
+    ${topSrc.length?`<div class="card pad">
+      <div class="label">How they found you</div>
+      <div class="row" style="flex-wrap:wrap">
+        ${topSrc.map(([s,n])=>`<div class="mono" style="padding:8px 12px;border:1px solid var(--line);font-size:11px">${esc(s)} <b style="color:var(--tapeDeep)">${n}</b></div>`).join("")}
+      </div>
+    </div>`:""}
+    <div>
+      <div class="label">Latest in</div>
+      <div class="stack" style="--s:8px" id="recent"></div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   LEAD LIST + ROWS
+============================================================ */
+function stageTag(stage){
+  return `<span class="stagetag" style="background:${STAGE_COLOR[stage]}">${stage}</span>`;
+}
+function leadRowEl(l){
+  const b = document.createElement("button");
+  b.className = "leadrow";
+  const sub = `${SIZES[l.home_size]?.label||"—"} · ${l.move_type==="local"?`${l.miles||0} mi local`:`${l.miles||0} mi haul`}${l.area?` · ${esc(l.area)}`:""}`;
+  b.innerHTML = `
+    <div class="edge" style="background:${STAGE_COLOR[l.stage]}"></div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name)}</div>
+      <div class="mono muted" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="mono" style="font-size:13px;font-weight:700">${l.quote_low?money(l.quote_low):"—"}</div>
+      ${stageTag(l.stage)}
+    </div>`;
+  b.onclick = () => { openLeadId=l.id; renderView(); syncNav(); };
+  return b;
+}
+function leadList(){
+  const el = document.createElement("div");
+  el.className = "stack5";
+  let filter = "all";
+  const draw = () => {
+    const shown = filter==="all" ? leads : leads.filter(l=>l.stage===filter);
+    el.innerHTML = `
+      <div class="row" style="flex-wrap:wrap">
+        ${chip("all", `ALL ${leads.length}`, filter==="all")}
+        ${STAGES.map(s=>chip(s, `${s.toUpperCase()} ${leads.filter(l=>l.stage===s).length}`, filter===s, STAGE_COLOR[s])).join("")}
+      </div>
+      <button class="btn" id="logBtn" style="border:2px dashed var(--line);color:var(--ink60)">+ LOG A CALL</button>
+      <div class="stack" style="--s:8px" id="rows"></div>`;
+    el.querySelectorAll("[data-chip]").forEach(c=>c.onclick=()=>{ filter=c.dataset.chip; draw(); });
+    el.querySelector("#logBtn").onclick = () => openQuickAdd(el, draw);
+    const rows = el.querySelector("#rows");
+    if(!shown.length){ rows.innerHTML = `<p class="mono muted" style="text-align:center;padding:32px 0;font-size:12px">Nothing in ${filter}.</p>`; }
+    else shown.forEach(l=>rows.appendChild(leadRowEl(l)));
+  };
+  draw();
+  return el;
+}
+function chip(val,text,on,color){
+  const c = on ? (color||"#17150F") : "transparent";
+  return `<button data-chip="${val}" class="chip${on?" on":""}" style="${on?`background:${c};border-color:${c}`:""}">${text}</button>`;
+}
+function openQuickAdd(container, redraw){
+  const card = document.createElement("div");
+  card.className="card pad stack";
+  card.innerHTML = `
+    <div class="label">New inquiry</div>
+    <div><div class="label">Name</div><input id="qName" placeholder="Who called?"/></div>
+    <div class="grid2">
+      <div><div class="label">Phone</div><input id="qPhone" type="tel" inputmode="tel" placeholder="555-0100"/></div>
+      <div><div class="label">Area</div><input id="qArea" placeholder="Neighborhood"/></div>
+    </div>
+    <div><div class="label">Found you via</div><div class="row" id="qSrc" style="flex-wrap:wrap">
+      ${SOURCES.map((s,i)=>`<button data-src="${s}" class="chip${i===0?" on":""}" style="${i===0?"background:#17150F;border-color:#17150F":""}">${s}</button>`).join("")}
+    </div></div>
+    <div><div class="label">Notes</div><input id="qNotes" placeholder="What do they need?"/></div>
+    <div class="row">
+      <button class="btn btn-primary" id="qSave" style="flex:1">SAVE LEAD</button>
+      <button class="btn btn-ghost" id="qCancel" style="padding-left:20px;padding-right:20px">CANCEL</button>
+    </div>`;
+  container.querySelector("#logBtn").replaceWith(card);
+  let src = SOURCES[0];
+  card.querySelectorAll("[data-src]").forEach(b=>b.onclick=()=>{
+    src=b.dataset.src;
+    card.querySelectorAll("[data-src]").forEach(x=>{x.classList.remove("on");x.style.background="";x.style.borderColor="";});
+    b.classList.add("on"); b.style.background="#17150F"; b.style.borderColor="#17150F";
+  });
+  card.querySelector("#qCancel").onclick = redraw;
+  card.querySelector("#qSave").onclick = async () => {
+    const name = card.querySelector("#qName").value.trim();
+    if(!name){ toast("A name is needed to save."); return; }
+    const phone = card.querySelector("#qPhone").value.trim();
+    clearBad(card, ["#qPhone"]);
+    const err = contactError(phone, "");
+    if(err){ toast(err); markBad(card, ["#qPhone"]); return; }
+    card.querySelector("#qSave").disabled = true;
+    const ok = await createLead({
+      name, phone,
+      area:card.querySelector("#qArea").value.trim(), source:src,
+      notes:card.querySelector("#qNotes").value.trim(),
+      home_size:"br1", move_type:"local", miles:10, access:"ground",
+      packing:false, stage:"new",
+    });
+    if(ok){ toast("Lead saved."); redraw(); }
+    else card.querySelector("#qSave").disabled = false;
+  };
+}
+
+/* ============================================================
+   LEAD DETAIL
+============================================================ */
+function leadDetail(id){
+  const l = leads.find(x=>x.id===id);
+  const el = document.createElement("div");
+  el.className="stack5";
+  if(!l){ el.innerHTML="<p>Lead not found.</p>"; return el; }
+  let editing = false;
+
+  const view = () => {
+    const est = l.quote_low ? {low:l.quote_low,high:l.quote_high} : estimate(l, settings);
+    el.innerHTML = `
+      <button class="mono muted" id="back" style="font-size:11px;letter-spacing:.1em">← BACK</button>
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between;align-items:flex-start">
+          <div>
+            <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em">${esc(l.name)}</h2>
+            <div class="mono muted" style="font-size:11px;margin-top:4px">${esc(l.area||"Area not set")} · via ${esc(l.source||"unknown")}</div>
+            ${l.phone?`<div class="mono muted" style="font-size:11px;margin-top:2px">${esc(l.phone)}</div>`:""}
+            ${l.email?`<div class="mono muted" style="font-size:11px;margin-top:2px">${esc(l.email)}</div>`:""}
+          </div>
+          ${stageTag(l.stage)}
+        </div>
+        <div class="row" style="margin-top:16px">
+          ${l.phone?`<a class="btn btn-dark" style="flex:1" href="tel:${esc(l.phone)}">CALL</a>`:""}
+          ${l.email?`<a class="btn btn-ghost" style="flex:1" href="mailto:${esc(l.email)}">EMAIL</a>`:""}
+          <button class="btn btn-ghost" id="edit" style="flex:1">EDIT</button>
+        </div>
+      </div>
+      ${est&&est.low>0?`<div class="card pad">
+        <div class="label">Quoted range</div>
+        <div class="mono" style="font-size:26px;font-weight:700">${money(est.low)} – ${money(est.high)}</div>
+        <div class="mono muted" style="font-size:11px;margin-top:4px">${SIZES[l.home_size]?.label||"—"} · ${ACCESS[l.access]?.label||"—"} · ${l.packing?"with packing":"no packing"}</div>
+      </div>`:""}
+      <div>
+        <div class="label">Move it along</div>
+        <div class="row" id="stageChips" style="flex-wrap:wrap">
+          ${STAGES.map(s=>`<button data-stage="${s}" class="chip${l.stage===s?" on":""}" style="${l.stage===s?`background:${STAGE_COLOR[s]};border-color:${STAGE_COLOR[s]}`:""}">${s.toUpperCase()}</button>`).join("")}
+        </div>
+      </div>
+      <div class="card pad">
+        <div class="label">Notes</div>
+        <textarea id="notes" rows="4" placeholder="Access, parking, fragile items, follow-up date…">${esc(l.notes||"")}</textarea>
+      </div>
+      <button class="btn btn-ghost" id="del" style="border-color:var(--void);color:var(--void)">DELETE LEAD</button>`;
+
+    el.querySelector("#back").onclick = () => { openLeadId=null; renderView(); syncNav(); };
+    el.querySelector("#edit").onclick = () => { editing=true; edit(); };
+    el.querySelectorAll("[data-stage]").forEach(b=>b.onclick=async()=>{
+      await patchLead(id,{stage:b.dataset.stage}); l.stage=b.dataset.stage; view();
+    });
+    let nt;
+    el.querySelector("#notes").oninput = (e)=>{ clearTimeout(nt); const v=e.target.value; l.notes=v; nt=setTimeout(()=>patchLead(id,{notes:v}),600); };
+    const del = el.querySelector("#del");
+    del.onclick = async () => {
+      if(del.dataset.armed){
+        await removeLead(id); openLeadId=null; tab="leads"; renderView(); syncNav(); toast("Lead deleted.");
+      } else { del.dataset.armed="1"; del.textContent="TAP AGAIN TO DELETE"; }
+    };
+  };
+
+  const edit = () => {
+    const d = { name:l.name, phone:l.phone||"", email:l.email||"", area:l.area||"", source:l.source||"Google",
+      home_size:l.home_size||"br2", move_type:l.move_type||"local", miles:l.miles||12,
+      access:l.access||"ground", packing:!!l.packing };
+
+    const paint = () => {
+      const est = estimate(d, settings);
+      el.innerHTML = `
+        <button class="mono muted" id="cancel" style="font-size:11px;letter-spacing:.1em">← CANCEL</button>
+        <div class="card pad stack">
+          <div class="label">Customer</div>
+          <div><div class="label">Name</div><input id="e_name" value="${esc(d.name)}" placeholder="Full name"/></div>
+          <div class="grid2">
+            <div><div class="label">Phone</div><input id="e_phone" type="tel" inputmode="tel" value="${esc(d.phone)}" placeholder="555-0100"/></div>
+            <div><div class="label">Area</div><input id="e_area" value="${esc(d.area)}" placeholder="Neighborhood"/></div>
+          </div>
+          <div><div class="label">Email</div><input id="e_email" type="email" inputmode="email" value="${esc(d.email)}" placeholder="name@email.com"/></div>
+          <div><div class="label">Found you via</div><div class="row" data-grp="source" style="flex-wrap:wrap">
+            ${SOURCES.map(s=>optChip("source",s,s,d.source===s)).join("")}
+          </div></div>
+        </div>
+        <div class="card pad stack">
+          <div class="label">Job details — these set the quote</div>
+          <div><div class="label">Home size</div><div class="row" data-grp="home_size" style="flex-wrap:wrap">
+            ${Object.entries(SIZES).map(([k,v])=>optChip("home_size",k,v.label,d.home_size===k)).join("")}
+          </div></div>
+          <div class="grid2">
+            <div><div class="label">Move type</div><div class="row" data-grp="move_type">
+              ${optChip("move_type","local","LOCAL",d.move_type==="local")}
+              ${optChip("move_type","long","LONG",d.move_type==="long")}
+            </div></div>
+            <div><div class="label">Distance · ${d.miles} mi</div>
+              <input type="range" min="1" max="${d.move_type==="local"?60:3000}" value="${d.miles}" id="e_miles"/></div>
+          </div>
+          <div><div class="label">Access</div><div class="row" data-grp="access" style="flex-wrap:wrap">
+            ${Object.entries(ACCESS).map(([k,v])=>optChip("access",k,v.label,d.access===k)).join("")}
+          </div></div>
+          <div><div class="label">Packing</div><div class="row" data-grp="packing">
+            ${optChip("packing","no","THEY PACK",!d.packing)}
+            ${optChip("packing","yes","WE PACK",d.packing)}
+          </div></div>
+          <div style="border-top:2px dashed var(--line);padding-top:12px">
+            <div class="label">Quote updates to</div>
+            <div class="mono" style="font-size:22px;font-weight:700">${money(est.low)} – ${money(est.high)}</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="e_save">SAVE CHANGES</button>`;
+
+      const keepText = () => {
+        d.name=el.querySelector("#e_name").value; d.phone=el.querySelector("#e_phone").value;
+        d.area=el.querySelector("#e_area").value; d.email=el.querySelector("#e_email").value;
+      };
+      el.querySelector("#cancel").onclick = () => { editing=false; view(); };
+      const mi = el.querySelector("#e_miles");
+      if(mi) mi.oninput = (e)=>{ keepText(); d.miles=Number(e.target.value); paint(); };
+      el.querySelectorAll("[data-grp]").forEach(g=>{
+        g.querySelectorAll("[data-val]").forEach(b=>b.onclick=()=>{
+          keepText();
+          const grp=g.dataset.grp, val=b.dataset.val;
+          if(grp==="packing") d.packing = val==="yes";
+          else if(grp==="move_type"){ d.move_type=val; d.miles = val==="local"?Math.min(d.miles,60):Math.max(d.miles,100); }
+          else d[grp]=val;
+          paint();
+        });
+      });
+      el.querySelector("#e_save").onclick = async () => {
+        keepText();
+        d.name=d.name.trim(); d.phone=d.phone.trim(); d.area=d.area.trim(); d.email=d.email.trim();
+        if(!d.name){ toast("A name is needed."); return; }
+        clearBad(el, ["#e_phone","#e_email"]);
+        const err = contactError(d.phone, d.email);
+        if(err){ toast(err); markBad(el, err.startsWith("That email")?["#e_email"]:["#e_phone"]); return; }
+        const est2 = estimate(d, settings);
+        const patch = { name:d.name, phone:d.phone, email:d.email, area:d.area, source:d.source,
+          home_size:d.home_size, move_type:d.move_type, miles:d.miles, access:d.access,
+          packing:d.packing, quote_low:est2.low, quote_high:est2.high };
+        el.querySelector("#e_save").disabled = true;
+        await patchLead(id, patch);
+        Object.assign(l, patch);
+        editing=false; toast("Lead updated."); view();
+      };
+    };
+    paint();
+  };
+
+  view();
+  return el;
+}
+
+/* ============================================================
+   QUOTE TOOL
+============================================================ */
+function quoteTool(){
+  const el = document.createElement("div");
+  el.className="stack5";
+  const q = { home_size:"br2", move_type:"local", miles:12, access:"ground", packing:false };
+  let capturing = false;
+  const who = { name:"", phone:"", email:"", area:"", source:"Google" };
+
+  const draw = () => {
+    const est = estimate(q, settings);
+    el.innerHTML = `
+      <div>
+        <div class="label">Home size</div>
+        <div class="row" style="flex-wrap:wrap" data-grp="home_size">
+          ${Object.entries(SIZES).map(([k,v])=>optChip("home_size",k,v.label,q.home_size===k)).join("")}
+        </div>
+      </div>
+      <div class="grid2">
+        <div><div class="label">Move type</div><div class="row" data-grp="move_type">
+          ${optChip("move_type","local","LOCAL",q.move_type==="local")}
+          ${optChip("move_type","long","LONG",q.move_type==="long")}
+        </div></div>
+        <div><div class="label">Distance · ${q.miles} mi</div>
+          <input type="range" min="1" max="${q.move_type==="local"?60:3000}" value="${q.miles}" id="miles"/></div>
+      </div>
+      <div>
+        <div class="label">Access</div>
+        <div class="row" style="flex-wrap:wrap" data-grp="access">
+          ${Object.entries(ACCESS).map(([k,v])=>optChip("access",k,v.label,q.access===k)).join("")}
+        </div>
+      </div>
+      <div>
+        <div class="label">Packing service</div>
+        <div class="row" data-grp="packing">
+          ${optChip("packing","no","THEY PACK",!q.packing)}
+          ${optChip("packing","yes","WE PACK",q.packing)}
+        </div>
+      </div>
+      <div class="ticket">
+        <div class="head"><span>Estimate ticket</span><span>${new Date().toLocaleDateString()}</span></div>
+        <div class="pad" style="padding-bottom:12px">
+          <div class="grid2" style="margin-bottom:16px">
+            <div><div class="label">Est. weight</div><div class="mono" style="font-size:16px">${est.lbs.toLocaleString()} lbs</div></div>
+            <div><div class="label">Crew</div><div class="mono" style="font-size:16px">${est.crew} movers</div></div>
+          </div>
+          <div class="stack" style="--s:4px;margin-bottom:16px">
+            ${est.lines.map(([l,v])=>`<div class="row mono" style="justify-content:space-between;font-size:12px"><span class="muted">${l}</span><span>${money(v)}</span></div>`).join("")}
+          </div>
+          <div style="border-top:2px dashed var(--line);padding-top:12px">
+            <div class="label">Quote range</div>
+            <div class="mono" style="font-size:30px;font-weight:700;letter-spacing:-.02em">${money(est.low)}<span class="muted"> – </span>${money(est.high)}</div>
+            <div class="mono muted" style="font-size:10px;margin-top:4px">Non-binding. Confirm after a walkthrough.</div>
+          </div>
+        </div>
+      </div>
+      ${capturing ? captureForm() : `<button class="btn btn-dark" id="capBtn">SAVE THIS QUOTE TO A LEAD</button>`}`;
+
+    // wire option groups
+    el.querySelectorAll("[data-grp]").forEach(g=>{
+      g.querySelectorAll("[data-val]").forEach(b=>b.onclick=()=>{
+        const grp=g.dataset.grp, val=b.dataset.val;
+        if(grp==="packing") q.packing = val==="yes";
+        else if(grp==="move_type"){ q.move_type=val; q.miles = val==="local"?12:400; }
+        else q[grp]=val;
+        draw();
+      });
+    });
+    const mi = el.querySelector("#miles");
+    if(mi) mi.oninput = (e)=>{ q.miles=Number(e.target.value); el.querySelector(".label").parentElement; draw(); };
+    const cap = el.querySelector("#capBtn");
+    if(cap) cap.onclick = ()=>{ capturing=true; draw(); };
+    wireCapture(el, q, who, est, draw, ()=>{ capturing=false; draw(); });
+  };
+
+  function captureForm(){
+    return `<div class="card pad stack">
+      <div class="label">Attach to a customer</div>
+      <div><div class="label">Name</div><input id="cName" value="${esc(who.name)}" placeholder="Full name"/></div>
+      <div class="grid2">
+        <div><div class="label">Phone</div><input id="cPhone" type="tel" inputmode="tel" value="${esc(who.phone)}" placeholder="555-0100"/></div>
+        <div><div class="label">Area</div><input id="cArea" value="${esc(who.area)}" placeholder="Neighborhood"/></div>
+      </div>
+      <div><div class="label">Email</div><input id="cEmail" type="email" inputmode="email" value="${esc(who.email)}" placeholder="Optional"/></div>
+      <div><div class="label">Found you via</div><div class="row" id="cSrc" style="flex-wrap:wrap">
+        ${SOURCES.map(s=>`<button data-src="${s}" class="chip${who.source===s?" on":""}" style="${who.source===s?"background:#17150F;border-color:#17150F":""}">${s}</button>`).join("")}
+      </div></div>
+      <div class="row">
+        <button class="btn btn-primary" id="cSave" style="flex:1">✓ SAVE QUOTE</button>
+        <button class="btn btn-ghost" id="cBack" style="padding-left:20px;padding-right:20px">BACK</button>
+      </div>
+    </div>`;
+  }
+  draw();
+  return el;
+}
+function optChip(grp,val,text,on){
+  return `<button data-val="${val}" class="chip${on?" on":""}" style="${on?"background:#17150F;border-color:#17150F":""}">${text}</button>`;
+}
+function wireCapture(el, q, who, est, draw, back){
+  const save = el.querySelector("#cSave"); if(!save) return;
+  el.querySelectorAll("#cName,#cPhone,#cArea,#cEmail").forEach(inp=>{
+    inp.oninput = ()=>{ who.name=el.querySelector("#cName").value; who.phone=el.querySelector("#cPhone").value;
+      who.area=el.querySelector("#cArea").value; who.email=el.querySelector("#cEmail").value; };
+  });
+  el.querySelectorAll("#cSrc [data-src]").forEach(b=>b.onclick=()=>{
+    who.source=b.dataset.src;
+    el.querySelectorAll("#cSrc [data-src]").forEach(x=>{x.classList.remove("on");x.style.background="";x.style.borderColor="";});
+    b.classList.add("on"); b.style.background="#17150F"; b.style.borderColor="#17150F";
+  });
+  el.querySelector("#cBack").onclick = back;
+  save.onclick = async () => {
+    who.name=el.querySelector("#cName").value.trim();
+    if(!who.name){ toast("Add a name to save the quote."); return; }
+    const phone=el.querySelector("#cPhone").value.trim();
+    const email=el.querySelector("#cEmail").value.trim();
+    clearBad(el, ["#cPhone","#cEmail"]);
+    const err = contactError(phone, email);
+    if(err){ toast(err); markBad(el, err.startsWith("That email")?["#cEmail"]:["#cPhone"]); return; }
+    save.disabled=true;
+    const ok = await createLead({
+      name:who.name, phone, email, area:el.querySelector("#cArea").value.trim(),
+      source:who.source, home_size:q.home_size, move_type:q.move_type, miles:q.miles,
+      access:q.access, packing:q.packing, stage:"quoted",
+      quote_low:est.low, quote_high:est.high,
+    });
+    if(ok){ toast("Quote saved to leads."); tab="leads"; openLeadId=null; renderView(); syncNav(); }
+    else save.disabled=false;
+  };
+}
+
+/* ============================================================
+   SETUP
+============================================================ */
+function setupView(){
+  const el = document.createElement("div");
+  el.className="stack5";
+  const s = settings;
+  let confirmWipe=false;
+  const draw = () => {
+    el.innerHTML = `
+      <div class="card pad stack">
+        <div class="row" style="justify-content:space-between;align-items:baseline">
+          <div class="label">Your business</div>
+          <div id="savedTag" class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--stamp);opacity:0;transition:opacity .2s">saved</div>
+        </div>
+        <div><div class="label">Company name</div><input id="company" value="${esc(s.company||"")}"/></div>
+        <div><div class="label">Phone</div><input id="phone" value="${esc(s.phone||"")}" placeholder="555-0100"/></div>
+      </div>
+      <div class="card pad stack">
+        <div class="label">Rates — these drive every quote</div>
+        <div><div class="label">Hourly rate per mover ($)</div><input id="hourly" type="number" value="${s.hourly_per_mover}"/></div>
+        <div><div class="label">Truck & travel fee ($)</div><input id="travel" type="number" value="${s.travel_fee}"/></div>
+        <div><div class="label">Long-haul base rate ($/lb)</div><input id="haul" type="number" step="0.01" value="${s.long_haul_base}"/></div>
+      </div>
+      <div class="card pad">
+        <div class="label">Service area</div>
+        <div class="row" style="flex-wrap:wrap;margin-bottom:12px" id="areaList">
+          ${(s.areas||[]).map(a=>`<button data-area="${esc(a)}" class="mono" style="padding:8px 12px;border:1px solid var(--line);font-size:11px">${esc(a)} <span class="muted">×</span></button>`).join("") || `<span class="mono muted" style="font-size:11px">No areas yet.</span>`}
+        </div>
+        <div class="row">
+          <input id="newArea" placeholder="Add a town or ZIP" style="flex:1"/>
+          <button class="btn btn-primary" id="addArea" style="padding-left:20px;padding-right:20px">ADD</button>
+        </div>
+      </div>
+      <div class="card pad">
+        <div class="label">Account</div>
+        <p class="muted" style="font-size:13px;margin-bottom:12px">${leads.length} leads, stored in your Supabase database.</p>
+        ${confirmWipe
+          ? `<div class="row"><button class="btn" id="wipeYes" style="flex:1;background:var(--void);color:var(--kraftLight)">YES, DELETE ALL</button><button class="btn btn-ghost" id="wipeNo" style="padding-left:20px;padding-right:20px">KEEP</button></div>`
+          : `<button class="btn btn-ghost" id="wipe" style="border-color:var(--void);color:var(--void)">CLEAR ALL LEADS</button>`}
+      </div>`;
+
+    // save as you type (debounced) so nothing is lost by forgetting to click away
+    let saveT, pending = null;
+    const flashSaved = () => {
+      const n = el.querySelector("#savedTag");
+      if(n){ n.textContent = "saved"; n.style.opacity = "1"; clearTimeout(n._t); n._t = setTimeout(()=>{ n.style.opacity="0"; }, 1200); }
+    };
+    const flush = async () => {
+      clearTimeout(saveT);
+      if(!pending) return;
+      const patch = pending; pending = null;
+      await saveSettings(patch); flashSaved();
+    };
+    const commit = (patch) => {
+      pending = { ...(pending||{}), ...patch };
+      if(patch.company!=null) $("coName").textContent = patch.company||"My Moving Co";
+      clearTimeout(saveT);
+      saveT = setTimeout(flush, 500);
+    };
+    el.querySelector("#company").oninput = e=>commit({company:e.target.value.trim()});
+    el.querySelector("#phone").oninput = e=>commit({phone:e.target.value.trim()});
+    el.querySelector("#hourly").oninput = e=>commit({hourly_per_mover:Number(e.target.value)||0});
+    el.querySelector("#travel").oninput = e=>commit({travel_fee:Number(e.target.value)||0});
+    el.querySelector("#haul").oninput = e=>commit({long_haul_base:Number(e.target.value)||0});
+    // a fast tab-away before the timer fires still saves
+    ["#company","#phone","#hourly","#travel","#haul"].forEach(id=>{
+      const n = el.querySelector(id); if(n) n.onblur = flush;
+    });
+    el.querySelectorAll("[data-area]").forEach(b=>b.onclick=async()=>{
+      await saveSettings({areas:(s.areas||[]).filter(x=>x!==b.dataset.area)}); draw();
+    });
+    el.querySelector("#addArea").onclick = async()=>{
+      const v = el.querySelector("#newArea").value.trim(); if(!v) return;
+      await saveSettings({areas:[...(s.areas||[]), v]}); draw();
+    };
+    const wipe = el.querySelector("#wipe");
+    if(wipe) wipe.onclick=()=>{ confirmWipe=true; draw(); };
+    const wy = el.querySelector("#wipeYes");
+    if(wy){ wy.onclick=async()=>{ for(const l of [...leads]) await removeLead(l.id); confirmWipe=false; toast("All leads cleared."); draw(); };
+      el.querySelector("#wipeNo").onclick=()=>{ confirmWipe=false; draw(); }; }
+  };
+  draw();
+  return el;
+}
+
+/* global nav helper for inline onclick */
+window.go = (t)=>{ tab=t; openLeadId=null; renderView(); syncNav(); };
+
+/* ============================================================
+   ICONS (inline SVG, currentColor)
+============================================================ */
+const ICON = {
+  board:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16.5 9.4 7.5 4.2M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>`,
+  leads:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  quote:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M8 10h.01M12 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01"/></svg>`,
+  setup:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/></svg>`,
+};
+
+/* ============================================================
+   BOOT
+============================================================ */
+async function enter(){
+  app.innerHTML = `<div class="spin"></div>`;
+  await loadAll();
+  renderShell();
+}
+
+sb.auth.onAuthStateChange((_event, s)=>{
+  const wasIn = !!session;
+  session = s;
+  if(session && !wasIn) enter();
+  else if(!session) renderAuth();
+});
+
+(async ()=>{
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  if(session) enter(); else renderAuth();
+})();
+</script>
+</body>
+</html>
