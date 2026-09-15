@@ -623,6 +623,11 @@ function leadDetail(id){
       const sent_at = new Date().toISOString();
       p.balance_cents = row.new_balance_cents;
       Object.assign(l, {partner_id:p.id, sent_at, charged_cents:row.charged_cents});
+      if(row.refunded_partner_id){
+        const prev = partners.find(x=>x.id===row.refunded_partner_id);
+        if(prev) prev.balance_cents += row.refunded_cents;
+        toast(`Sent to ${p.name} for $${(row.charged_cents/100).toFixed(2)}. ${row.refunded_partner_name||"Previous partner"} refunded $${(row.refunded_cents/100).toFixed(2)} (half of their charge).`);
+      }
       choosingPartner = false;
       window.location.href = partnerMailto(l, p, est);
       view();
