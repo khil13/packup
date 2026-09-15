@@ -108,6 +108,7 @@ const STAGE_COLOR = {new:"#F0821E",quoted:"#17150F",booked:"#1F4D46",lost:"#8C3A
 let session = null;
 let settings = null;
 let leads = [];
+let partners = [];
 let tab = "board";
 let openLeadId = null;
 
@@ -166,18 +167,51 @@ function estimate(input, s){
     lines:lines.map(([l,v])=>[l,Math.round(v)]) };
 }
 
+/* ---- partner handoff email ---- */
+function partnerMailto(l, p, est){
+  const subject = `New moving lead — ${l.name}${l.area?` (${l.area})`:""}`;
+  const body = [
+    `Name: ${l.name}`,
+    l.phone && `Phone: ${l.phone}`,
+    l.email && `Email: ${l.email}`,
+    l.area && `Area: ${l.area}`,
+    `Home size: ${SIZES[l.home_size]?.label||"—"}`,
+    `Move type: ${l.move_type==="local"?"Local":"Long distance"}`,
+    `Distance: ${l.miles||0} mi`,
+    `Access: ${ACCESS[l.access]?.label||"—"}`,
+    `Packing: ${l.packing?"Customer wants packing help":"Customer will pack themselves"}`,
+    est && est.low && `Estimated range: ${money(est.low)} – ${money(est.high)}`,
+    l.notes && `Notes: ${l.notes}`,
+    "",
+    "Sent via PackUp.",
+  ].filter(Boolean).join("\n");
+  return `mailto:${encodeURIComponent(p.contact_email||"")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 /* ============================================================
    DATA LAYER
 ============================================================ */
 async function loadAll(){
-  const [{data:st}, {data:ld, error}] = await Promise.all([
+  const [{data:st}, {data:ld, error}, {data:pt}] = await Promise.all([
     sb.from("company_settings").select("*").maybeSingle(),
     sb.from("leads").select("*").order("created_at",{ascending:false}),
+    sb.from("partners").select("*").order("created_at",{ascending:false}),
   ]);
   if(error) console.warn(error);
   settings = st || { company:"My Moving Co", phone:"", hourly_per_mover:62,
     travel_fee:95, long_haul_base:0.35, areas:[] };
   leads = ld || [];
+  partners = pt || [];
+}
+async function createPartner(row){
+  const { data, error } = await sb.from("partners").insert(row).select().single();
+  if(error){ toast(error.message); return null; }
+  partners.unshift(data); return data;
+}
+async function removePartner(id){
+  const { error } = await sb.from("partners").delete().eq("id",id);
+  if(error){ toast(error.message); return; }
+  partners = partners.filter(p=>p.id!==id);
 }
 async function createLead(row){
   const { data, error } = await sb.from("leads").insert(row).select().single();
@@ -394,7 +428,7 @@ function stageTag(stage){
 function leadRowEl(l){
   const b = document.createElement("button");
   b.className = "leadrow";
-  const sub = `${SIZES[l.home_size]?.label||"—"} · ${l.move_type==="local"?`${l.miles||0} mi local`:`${l.miles||0} mi haul`}${l.area?` · ${esc(l.area)}`:""}`;
+  const sub = `${SIZES[l.home_size]?.label||"—"} · ${l.move_type==="local"?`${l.miles||0} mi local`:`${l.miles||0} mi haul`}${l.area?` · ${esc(l.area)}`:""}${l.partner_id?` · → ${esc(partners.find(p=>p.id===l.partner_id)?.name||"partner")}`:""}`;
   b.innerHTML = `
     <div class="edge" style="background:${STAGE_COLOR[l.stage]}"></div>
     <div style="flex:1;min-width:0">
@@ -489,9 +523,11 @@ function leadDetail(id){
   el.className="stack5";
   if(!l){ el.innerHTML="<p>Lead not found.</p>"; return el; }
   let editing = false;
+  let choosingPartner = false;
 
   const view = () => {
     const est = l.quote_low ? {low:l.quote_low,high:l.quote_high} : estimate(l, settings);
+    const partner = partners.find(p=>p.id===l.partner_id);
     el.innerHTML = `
       <button class="mono muted" id="back" style="font-size:11px;letter-spacing:.1em">← BACK</button>
       <div class="card pad">
@@ -522,6 +558,18 @@ function leadDetail(id){
         </div>
       </div>
       <div class="card pad">
+        <div class="label">Hand off to partner</div>
+        ${(l.partner_id && !choosingPartner) ? `
+          <p style="font-size:14px">Sent to <b>${esc(partner?partner.name:"a removed partner")}</b>${l.sent_at?` on ${new Date(l.sent_at).toLocaleDateString()}`:""}.</p>
+          <button class="btn btn-ghost" id="resendPartner" style="margin-top:12px">SEND TO A DIFFERENT PARTNER</button>
+        ` : partners.length ? `
+          <select id="partnerPick">
+            ${partners.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}
+          </select>
+          <button class="btn btn-dark" id="sendPartner" style="margin-top:12px">SEND TO PARTNER</button>
+        ` : `<p class="muted" style="font-size:13px">No partners added yet — add one in Setup.</p>`}
+      </div>
+      <div class="card pad">
         <div class="label">Notes</div>
         <textarea id="notes" rows="4" placeholder="Access, parking, fragile items, follow-up date…">${esc(l.notes||"")}</textarea>
       </div>
@@ -532,6 +580,19 @@ function leadDetail(id){
     el.querySelectorAll("[data-stage]").forEach(b=>b.onclick=async()=>{
       await patchLead(id,{stage:b.dataset.stage}); l.stage=b.dataset.stage; view();
     });
+    const resendBtn = el.querySelector("#resendPartner");
+    if(resendBtn) resendBtn.onclick = () => { choosingPartner=true; view(); };
+    const sendBtn = el.querySelector("#sendPartner");
+    if(sendBtn) sendBtn.onclick = async () => {
+      const p = partners.find(x=>x.id===el.querySelector("#partnerPick").value);
+      if(!p) return;
+      const sent_at = new Date().toISOString();
+      await patchLead(id, {partner_id:p.id, sent_at});
+      Object.assign(l, {partner_id:p.id, sent_at});
+      choosingPartner = false;
+      window.location.href = partnerMailto(l, p, est);
+      view();
+    };
     let nt;
     el.querySelector("#notes").oninput = (e)=>{ clearTimeout(nt); const v=e.target.value; l.notes=v; nt=setTimeout(()=>patchLead(id,{notes:v}),600); };
     const del = el.querySelector("#del");
@@ -810,6 +871,28 @@ function setupView(){
         </div>
       </div>
       <div class="card pad">
+        <div class="label">Partner movers</div>
+        <p class="muted" style="font-size:13px;margin-bottom:12px">Licensed companies you hand leads off to. Verify each one's NJ Public Mover License before adding them.</p>
+        <div class="stack" style="--s:8px" id="partnerList">
+          ${partners.length ? partners.map(p=>`<div class="leadrow" style="cursor:default">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</div>
+              <div class="mono muted" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.license_number?`Lic. ${esc(p.license_number)}`:"No license # on file"}${p.contact_email?` · ${esc(p.contact_email)}`:""}${p.contact_phone?` · ${esc(p.contact_phone)}`:""}</div>
+            </div>
+            <button data-del-partner="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">DELETE</button>
+          </div>`).join("") : `<span class="mono muted" style="font-size:11px">No partners added yet.</span>`}
+        </div>
+        <div class="stack" style="margin-top:12px">
+          <input id="pName" placeholder="Company name"/>
+          <div class="grid2">
+            <input id="pLicense" placeholder="NJ Public Mover License #"/>
+            <input id="pPhone" type="tel" inputmode="tel" placeholder="Phone"/>
+          </div>
+          <input id="pEmail" type="email" inputmode="email" placeholder="Email for handoffs"/>
+          <button class="btn btn-primary" id="addPartner">ADD PARTNER</button>
+        </div>
+      </div>
+      <div class="card pad">
         <div class="label">Account</div>
         <p class="muted" style="font-size:13px;margin-bottom:12px">${leads.length} leads, stored in your Supabase database.</p>
         ${confirmWipe
@@ -860,6 +943,22 @@ function setupView(){
     const qrImg = el.querySelector("#qrImg");
     qrImg.onerror = () => { el.querySelector("#qrWrap").style.display = "none"; };
     qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(el.querySelector("#publicUrl").value)}`;
+    el.querySelectorAll("[data-del-partner]").forEach(b=>b.onclick=async()=>{
+      await removePartner(b.dataset.delPartner); draw();
+    });
+    el.querySelector("#addPartner").onclick = async () => {
+      const name = el.querySelector("#pName").value.trim();
+      if(!name){ toast("A company name is needed to add a partner."); return; }
+      const phone = el.querySelector("#pPhone").value.trim();
+      const email = el.querySelector("#pEmail").value.trim();
+      const err = contactError(phone, email);
+      if(err){ toast(err); return; }
+      const ok = await createPartner({
+        name, license_number:el.querySelector("#pLicense").value.trim(),
+        contact_phone:phone, contact_email:email,
+      });
+      if(ok){ toast("Partner added."); draw(); }
+    };
     const wipe = el.querySelector("#wipe");
     if(wipe) wipe.onclick=()=>{ confirmWipe=true; draw(); };
     const wy = el.querySelector("#wipeYes");
