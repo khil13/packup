@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#E3D6BB" />
+<title>Add Funds</title>
+<style>
+  :root{
+    --kraft:#E3D6BB; --kraftDeep:#D3C09C; --kraftLight:#EFE6D2;
+    --ink:#17150F; --ink60:#5C5647; --line:#B9A67E;
+    --tape:#F0821E; --tapeDeep:#C4630D; --stamp:#1F4D46; --void:#8C3A22;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--kraft);color:var(--ink);font-family:var(--sans)}
+  body{min-height:100vh;min-height:100dvh}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input{font-family:var(--mono);font-size:14px;width:100%;
+    padding:12px;border:1px solid var(--line);background:var(--kraftLight);color:var(--ink);outline:none}
+  input:focus{border-color:var(--ink)}
+  .tape{height:6px;background:var(--tape)}
+  .wrap{max-width:520px;margin:0 auto}
+  .pad{padding:20px}
+  .mono{font-family:var(--mono)}
+  .label{font-family:var(--mono);color:var(--ink60);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .card{background:var(--kraftLight);border:1px solid var(--line)}
+  .row{display:flex;gap:8px}
+  .chip{padding:10px 14px;border:1px solid var(--line);font-family:var(--mono);font-size:13px;background:transparent;color:var(--ink)}
+  .chip.on{background:#17150F;border-color:#17150F;color:var(--kraftLight)}
+  .btn{padding:14px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-primary{background:var(--tape);color:var(--ink)}
+  .btn:disabled{background:var(--kraftDeep);cursor:not-allowed}
+  .hidden{display:none!important}
+  .stack>*+*{margin-top:12px}
+  .stack5>*+*{margin-top:20px}
+  h1{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .muted{color:var(--ink60)}
+  header{padding:24px 20px 16px;border-bottom:1px solid var(--line)}
+  main{padding:20px 20px 60px}
+  .err{color:var(--void);font-size:13px}
+  .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:sp 0.8s linear infinite;margin:40px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="tape"></div>
+<div id="app" class="wrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL = "https://hkysddnwwdrabfakmmdk.supabase.co";
+const SB_KEY = "sb_publishable_fbJw86MrQjxIFb-0-lTMKw_9cWDWheP";
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+const $ = (id) => document.getElementById(id);
+const app = $("app");
+const esc = (s) => String(s==null?"":s).replace(/[&<>"']/g, m => (
+  {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const money = (cents) => "$" + (Math.round(cents||0)/100).toFixed(2);
+
+function header(){
+  return `<header>
+    <h1>Pack<span style="color:var(--tapeDeep)">Up</span></h1>
+    <div class="label" style="margin-top:6px">Add funds to your lead wallet</div>
+  </header>`;
+}
+function renderError(msg){
+  app.innerHTML = `${header()}<main><div class="card pad"><p class="err">${esc(msg)}</p></div></main>`;
+}
+
+function renderForm(partnerId, partner){
+  const PRESETS = [75, 150, 300];
+  let amount = Math.max(75, partner.balance_cents === 0 ? 75 : 75);
+
+  const draw = () => {
+    app.innerHTML = `${header()}
+    <main class="stack5">
+      <div class="card pad">
+        <div class="label">Account</div>
+        <p style="font-size:18px;font-weight:700">${esc(partner.name)}</p>
+        <p class="mono muted" style="font-size:13px;margin-top:4px">Current balance: ${money(partner.balance_cents)}</p>
+      </div>
+      <div>
+        <div class="label">Amount to add</div>
+        <div class="row" style="flex-wrap:wrap;margin-bottom:12px">
+          ${PRESETS.map(p=>`<button data-preset="${p}" class="chip${amount===p?" on":""}">$${p}</button>`).join("")}
+        </div>
+        <input id="amt" type="number" min="1" step="1" value="${amount}" placeholder="Custom amount"/>
+        ${partner.balance_cents===0?`<p class="mono muted" style="font-size:11px;margin-top:8px">First top-up needs to be at least $75.</p>`:""}
+      </div>
+      <div id="msg" class="err hidden"></div>
+      <button class="btn btn-primary" id="go">CONTINUE TO SECURE PAYMENT</button>
+      <p class="mono muted" style="font-size:10px;text-align:center">You'll be redirected to Stripe to complete payment. PackUp never sees your card details.</p>
+    </main>`;
+
+    app.querySelectorAll("[data-preset]").forEach(b=>b.onclick=()=>{
+      amount = Number(b.dataset.preset);
+      draw();
+    });
+    app.querySelector("#amt").oninput = (e)=>{ amount = Number(e.target.value)||0; };
+    const msg = app.querySelector("#msg");
+    app.querySelector("#go").onclick = async () => {
+      const amt = Number(app.querySelector("#amt").value);
+      msg.classList.add("hidden");
+      if(!amt || amt <= 0){ msg.textContent="Enter a valid amount."; msg.classList.remove("hidden"); return; }
+      if(partner.balance_cents===0 && amt < 75){ msg.textContent="First top-up needs to be at least $75."; msg.classList.remove("hidden"); return; }
+      const btn = app.querySelector("#go");
+      btn.disabled = true; btn.textContent = "…";
+      const { data, error } = await sb.functions.invoke("create-topup-session", {
+        body: { partner_id: partnerId, amount: amt, origin: location.origin },
+      });
+      if(error || !data?.url){
+        msg.textContent = (data && data.error) || "Something went wrong — try again.";
+        msg.classList.remove("hidden");
+        btn.disabled = false; btn.textContent = "CONTINUE TO SECURE PAYMENT";
+        return;
+      }
+      location.href = data.url;
+    };
+  };
+  draw();
+}
+
+function renderStatus(status){
+  const ok = status === "success";
+  app.innerHTML = `${header()}
+  <main>
+    <div class="card pad" style="text-align:center">
+      <p style="font-size:18px;font-weight:700;margin-bottom:8px">${ok?"Payment received":"Payment cancelled"}</p>
+      <p class="muted" style="font-size:14px">${ok?"Your wallet balance has been updated. It may take a few seconds to reflect.":"No charge was made. You can try again any time using the same link."}</p>
+    </div>
+  </main>`;
+}
+
+(async () => {
+  app.innerHTML = `<div class="spin"></div>`;
+  const params = new URLSearchParams(location.search);
+  const partnerId = params.get("partner");
+  const status = params.get("status");
+  if(!partnerId){ renderError("This link is missing a partner ID. Ask PackUp for your top-up link."); return; }
+
+  const { data, error } = await sb.rpc("get_partner_topup_info", { p_partner_id: partnerId });
+  if(error || !data || !data.length){ renderError("We couldn't find your account. Ask PackUp for a fresh top-up link."); return; }
+  const partner = data[0];
+
+  if(status){ renderStatus(status); return; }
+  renderForm(partnerId, partner);
+})();
+</script>
+</body>
+</html>
