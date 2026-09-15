@@ -798,6 +798,14 @@ function setupView(){
         </div>
       </div>
       <div class="card pad">
+        <div class="label">Your public quote form</div>
+        <p class="muted" style="font-size:13px;margin-bottom:12px">Share this link — anyone who fills it out lands in your Board as a new lead. No login needed for them.</p>
+        <div class="row">
+          <input id="publicUrl" readonly value="${location.origin}/request.html" style="flex:1"/>
+          <button class="btn btn-primary" id="copyUrl" style="padding-left:20px;padding-right:20px">COPY</button>
+        </div>
+      </div>
+      <div class="card pad">
         <div class="label">Account</div>
         <p class="muted" style="font-size:13px;margin-bottom:12px">${leads.length} leads, stored in your Supabase database.</p>
         ${confirmWipe
@@ -838,6 +846,12 @@ function setupView(){
     el.querySelector("#addArea").onclick = async()=>{
       const v = el.querySelector("#newArea").value.trim(); if(!v) return;
       await saveSettings({areas:[...(s.areas||[]), v]}); draw();
+    };
+    el.querySelector("#copyUrl").onclick = async () => {
+      const btn = el.querySelector("#copyUrl");
+      try{ await navigator.clipboard.writeText(el.querySelector("#publicUrl").value); btn.textContent="COPIED"; }
+      catch{ el.querySelector("#publicUrl").select(); btn.textContent="SELECTED"; }
+      setTimeout(()=>{ btn.textContent="COPY"; }, 1500);
     };
     const wipe = el.querySelector("#wipe");
     if(wipe) wipe.onclick=()=>{ confirmWipe=true; draw(); };
