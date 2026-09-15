@@ -1,0 +1,6 @@
+# The bare domain root previously fell through to index.html (the owner's
+# private login/dashboard) since there was no routing config at all — most
+# visitors (organic search, shared links without a full path) never saw the
+# actual lead-capture form at /request.html. Send root traffic there
+# instead; index.html itself is still reachable at its own explicit path.
+/    /request.html   301

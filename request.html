@@ -4,7 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#E3D6BB" />
-<title>Compare Moving Costs</title>
+<title>Compare Moving Costs | PackUp</title>
+<meta name="description" content="Get a free moving cost estimate and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Compare Moving Costs | PackUp" />
+<meta property="og:description" content="Get a free moving cost estimate and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
+<meta property="og:url" content="https://packupleads.netlify.app/request.html" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Compare Moving Costs | PackUp" />
+<meta name="twitter:description" content="Get a free moving cost estimate and get matched with a licensed local moving company. No account needed, no bidding war." />
 <style>
   :root{
     --kraft:#E3D6BB; --kraftDeep:#D3C09C; --kraftLight:#EFE6D2;
@@ -306,6 +314,8 @@ function renderThanks(est){
     </div>
   </main>`;
 }
+
+sb.rpc("log_page_view", { p_path: "request.html" }); // fire-and-forget visit log, never blocks the page
 
 (async () => {
   app.innerHTML = `<div class="spin"></div>`;
