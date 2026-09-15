@@ -222,16 +222,6 @@ async function createPartner(row){
   if(error){ toast(error.message); return null; }
   partners.unshift(data); return data;
 }
-async function patchPartner(id, patch){
-  const { data, error } = await sb.from("partners").update(patch).eq("id",id).select().single();
-  if(error){ toast(error.message); return null; }
-  const i = partners.findIndex(p=>p.id===id); if(i>-1) partners[i]=data;
-  return data;
-}
-async function createWalletTransaction(row){
-  const { error } = await sb.from("wallet_transactions").insert(row);
-  if(error) toast(error.message);
-}
 async function removePartner(id){
   const { error } = await sb.from("partners").delete().eq("id",id);
   if(error){ toast(error.message); return; }
@@ -1055,8 +1045,15 @@ function setupView(){
       if(p.balance_cents===0 && amount < 75){ toast("First top-up needs to be at least $75."); return; }
       const cents = Math.round(amount*100);
       const note = el.querySelector("#tuNote").value.trim();
-      await patchPartner(p.id, {balance_cents:p.balance_cents+cents});
-      await createWalletTransaction({partner_id:p.id, amount_cents:cents, kind:"topup", note:note||null});
+      recordTopup.disabled = true;
+      // record_partner_topup does the balance increment and the wallet
+      // transaction insert in one atomic DB transaction — no client-computed
+      // balance, so two near-simultaneous top-ups can't lose one against the other.
+      const { data, error } = await sb.rpc("record_partner_topup", { p_partner_id: p.id, p_amount_cents: cents, p_note: note || null });
+      recordTopup.disabled = false;
+      if(error){ toast(error.message); return; }
+      const row = Array.isArray(data) ? data[0] : data;
+      p.balance_cents = row.new_balance_cents;
       toast(`Added $${amount.toFixed(2)} to ${p.name}.`);
       draw();
     };
