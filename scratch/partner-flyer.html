@@ -1,0 +1,305 @@
+<title>Partner Lead Rates</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root{
+    --kraft:#E3D6BB;
+    --kraft-deep:#CBB78D;
+    --paper:#F8F3E6;
+    --ink:#17150F;
+    --ink-60:#5C5647;
+    --tape:#F0821E;
+    --tape-deep:#A8500C;
+    --stamp:#1F4D46;
+    --stamp-ink:#EFE6D2;
+    --mono:ui-monospace,SFMono-Regular,"IBM Plex Mono",Menlo,Consolas,monospace;
+    --display:"Oswald",Impact,"Arial Narrow",sans-serif;
+    --body:"IBM Plex Sans",system-ui,sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--kraft);
+    color:var(--ink);
+    font-family:var(--body);
+    padding:32px 16px 48px;
+  }
+  .sheet{
+    max-width:720px;
+    margin:0 auto;
+    background:var(--paper);
+    border:1.5px solid var(--ink);
+    box-shadow:0 1px 0 var(--kraft-deep), 0 10px 30px -18px rgba(23,21,15,.45);
+  }
+  .tapetop{
+    height:14px;
+    background:repeating-linear-gradient(135deg, var(--tape), var(--tape) 10px, var(--tape-deep) 10px, var(--tape-deep) 20px);
+  }
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    padding:28px 32px 20px;
+    border-bottom:1px dashed var(--kraft-deep);
+    flex-wrap:wrap;
+  }
+  .word{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(30px,6vw,40px);
+    letter-spacing:.01em;
+    text-transform:uppercase;
+    line-height:1;
+  }
+  .word span{color:var(--tape-deep)}
+  .manifest-id{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-60);
+    text-align:right;
+    line-height:1.6;
+    letter-spacing:.02em;
+  }
+  .manifest-id b{color:var(--ink);font-weight:600}
+
+  main{padding:8px 32px 0}
+
+  .kicker{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--stamp);
+    font-weight:600;
+    margin-top:22px;
+  }
+  h1{
+    font-family:var(--display);
+    font-weight:600;
+    text-transform:uppercase;
+    font-size:clamp(26px,4.6vw,34px);
+    line-height:1.08;
+    letter-spacing:.005em;
+    text-wrap:balance;
+    margin:10px 0 14px;
+    max-width:30ch;
+  }
+  .lede{
+    font-size:15.5px;
+    line-height:1.55;
+    color:var(--ink);
+    max-width:62ch;
+    margin-bottom:6px;
+  }
+  .lede b{font-weight:600}
+
+  .divider{
+    border:none;
+    border-top:1px dashed var(--kraft-deep);
+    margin:26px 0 24px;
+  }
+
+  .section-label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-60);
+    margin-bottom:14px;
+  }
+
+  .steps{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:18px;
+  }
+  .step{position:relative}
+  .step .n{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--tape-deep);
+    font-weight:700;
+    letter-spacing:.04em;
+  }
+  .step p{
+    font-size:14px;
+    line-height:1.5;
+    margin-top:6px;
+  }
+  .step b{font-weight:600}
+
+  .ratecard{
+    border:1px solid var(--ink);
+    background:var(--kraft);
+  }
+  .ratecard .head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:var(--ink);
+    color:var(--stamp-ink);
+    padding:9px 16px;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 16px;font-size:14.5px;border-bottom:1px solid var(--kraft-deep)}
+  tr:last-of-type td{border-bottom:none}
+  td.size{font-weight:500}
+  td.price{
+    font-family:var(--mono);
+    text-align:right;
+    font-weight:700;
+    font-size:16px;
+    font-variant-numeric:tabular-nums;
+  }
+  .surcharge-row td{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-60);
+    padding-top:10px;
+    padding-bottom:10px;
+  }
+  .surcharge-row td.price{font-size:13px;color:var(--ink-60);font-weight:600}
+  .ratecard .foot{
+    padding:12px 16px 16px;
+    font-size:12.5px;
+    color:var(--ink-60);
+    line-height:1.5;
+  }
+  .ratecard .foot b{color:var(--ink);font-weight:600}
+
+  .trust{
+    margin-top:22px;
+    padding:14px 16px;
+    border-left:3px solid var(--stamp);
+    background:rgba(31,77,70,.06);
+    font-size:13px;
+    line-height:1.55;
+    color:var(--ink);
+  }
+  .trust b{color:var(--stamp);font-weight:600}
+
+  .cta{
+    margin:28px -32px 0;
+    background:var(--stamp);
+    color:var(--stamp-ink);
+    padding:26px 32px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .cta .ask{
+    font-family:var(--display);
+    text-transform:uppercase;
+    font-weight:600;
+    font-size:19px;
+    letter-spacing:.01em;
+  }
+  .cta .contact{
+    font-family:var(--mono);
+    font-size:14px;
+    text-align:right;
+  }
+  .cta .contact a{color:var(--stamp-ink);text-decoration:underline;text-underline-offset:3px}
+  .cta .contact .site{display:block;font-size:11px;opacity:.8;margin-top:4px}
+
+  .stub{
+    padding:14px 32px 26px;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.06em;
+    color:var(--ink-60);
+    text-align:center;
+  }
+
+  @media (max-width:520px){
+    .steps{grid-template-columns:1fr}
+    header{padding:22px 20px 16px}
+    main{padding:8px 20px 0}
+    .cta{margin:28px -20px 0;padding:22px 20px;flex-direction:column;align-items:flex-start}
+    .cta .contact{text-align:left}
+    .stub{padding:14px 20px 24px}
+  }
+
+  @media print{
+    body{background:#fff;padding:0}
+    .sheet{box-shadow:none;border:none;max-width:none}
+  }
+</style>
+
+<div class="sheet">
+  <div class="tapetop"></div>
+  <header>
+    <div class="word">Pack<span>Up</span></div>
+    <div class="manifest-id">
+      MOVER PARTNER PROGRAM<br>
+      SERVICE AREA: <b>IRVINGTON, NJ</b> &amp; NEARBY
+    </div>
+  </header>
+
+  <main>
+    <div class="kicker">Now recruiting</div>
+    <h1>Real move requests, sent to you — not five other movers.</h1>
+    <p class="lede">
+      PackUp is a referral service for people moving in and around Irvington. We collect the request,
+      you get the job — <b>each lead goes to one mover, never shared or auctioned.</b> We don't perform
+      moves ourselves; you handle the job, we handle the lead flow.
+    </p>
+
+    <hr class="divider">
+
+    <div class="section-label">How it works</div>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01 — REQUEST</div>
+        <p>A customer fills out our site with their move details — size, distance, timing.</p>
+      </div>
+      <div class="step">
+        <div class="n">02 — DELIVERY</div>
+        <p>We send it straight to your phone or email. <b>No bidding war, no shared leads.</b></p>
+      </div>
+      <div class="step">
+        <div class="n">03 — PAYMENT</div>
+        <p>You pay only for the lead you receive, out of a prepaid balance you control.</p>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section-label">Rate card</div>
+    <div class="ratecard">
+      <div class="head"><span>Per-lead pricing</span><span>USD</span></div>
+      <table>
+        <tr><td class="size">Studio / 1 bedroom</td><td class="price">$12</td></tr>
+        <tr><td class="size">2 bedroom</td><td class="price">$15</td></tr>
+        <tr><td class="size">3 bedroom</td><td class="price">$19</td></tr>
+        <tr><td class="size">4+ bedroom</td><td class="price">$24</td></tr>
+        <tr class="surcharge-row"><td>+ Long-distance or 30&thinsp;mi&thinsp;+ moves</td><td class="price">+$6</td></tr>
+      </table>
+      <div class="foot"><b>$75</b> minimum to open your account. No subscription, no contract — top up by card whenever you want, stop whenever you want.</div>
+    </div>
+
+    <div class="trust">
+      <b>We only work with licensed NJ movers.</b> Have your NJ Public Mover License number ready —
+      we verify it before your first lead goes out.
+    </div>
+  </main>
+
+  <div class="cta">
+    <div class="ask">Ready for local leads?</div>
+    <div class="contact">
+      <a href="mailto:packupleads@gmail.com">packupleads@gmail.com</a><br>
+      <a href="tel:+18622150984">(862) 215-0984</a>
+      <span class="site">packupleads.netlify.app</span>
+    </div>
+  </div>
+  <div class="stub">PACKUP · MOVER PARTNER PROGRAM · ESSEX COUNTY, NJ</div>
+</div>
