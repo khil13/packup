@@ -71,7 +71,31 @@ function renderError(msg){
   app.innerHTML = `${header()}<main><div class="card pad"><p class="err">${esc(msg)}</p></div></main>`;
 }
 
-function renderForm(partnerId, partner){
+function renderAuth(){
+  app.innerHTML = `${header()}
+    <main class="stack5">
+      <div class="card pad stack">
+        <div class="label">Sign in to manage your wallet</div>
+        <div><div class="label">Email</div><input id="email" type="email" autocomplete="username" placeholder="you@example.com"/></div>
+        <div><div class="label">Password</div><input id="pw" type="password" autocomplete="current-password" placeholder="Password"/></div>
+        <button class="btn btn-primary" id="go">SIGN IN</button>
+        <div id="msg" class="err hidden"></div>
+      </div>
+    </main>`;
+  const msg = $("msg");
+  const showMsg = (t) => { msg.textContent=t; msg.classList.remove("hidden"); };
+  $("go").onclick = async () => {
+    const email = $("email").value.trim();
+    const password = $("pw").value;
+    if(!email || !password){ showMsg("Enter your email and password."); return; }
+    const btn = $("go"); btn.disabled = true; btn.textContent = "…";
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ showMsg(error.message); btn.disabled = false; btn.textContent = "SIGN IN"; return; }
+    start();
+  };
+}
+
+function renderForm(partner){
   const PRESETS = [75, 150, 300];
   let amount = Math.max(75, partner.balance_cents === 0 ? 75 : 75);
 
@@ -110,7 +134,7 @@ function renderForm(partnerId, partner){
       const btn = app.querySelector("#go");
       btn.disabled = true; btn.textContent = "…";
       const { data, error } = await sb.functions.invoke("create-topup-session", {
-        body: { partner_id: partnerId, amount: amt, origin: location.origin },
+        body: { amount: amt },
       });
       if(error || !data?.url){
         msg.textContent = (data && data.error) || "Something went wrong — try again.";
@@ -130,25 +154,28 @@ function renderStatus(status){
   <main>
     <div class="card pad" style="text-align:center">
       <p style="font-size:18px;font-weight:700;margin-bottom:8px">${ok?"Payment received":"Payment cancelled"}</p>
-      <p class="muted" style="font-size:14px">${ok?"Your wallet balance has been updated. It may take a few seconds to reflect.":"No charge was made. You can try again any time using the same link."}</p>
+      <p class="muted" style="font-size:14px">${ok?"Your wallet balance has been updated. It may take a few seconds to reflect.":"No charge was made. You can try again any time."}</p>
     </div>
   </main>`;
 }
 
-(async () => {
+async function start(){
   app.innerHTML = `<div class="spin"></div>`;
-  const params = new URLSearchParams(location.search);
-  const partnerId = params.get("partner");
-  const status = params.get("status");
-  if(!partnerId){ renderError("This link is missing a partner ID. Ask PackUp for your top-up link."); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ renderAuth(); return; }
 
-  const { data, error } = await sb.rpc("get_partner_topup_info", { p_partner_id: partnerId });
-  if(error || !data || !data.length){ renderError("We couldn't find your account. Ask PackUp for a fresh top-up link."); return; }
+  const status = new URLSearchParams(location.search).get("status");
+
+  const { data, error } = await sb.rpc("get_partner_topup_info");
+  if(error || !data || !data.length){ renderError("No partner account is linked to this login. Ask PackUp for your invite link."); return; }
   const partner = data[0];
 
   if(status){ renderStatus(status); return; }
-  renderForm(partnerId, partner);
-})();
+  renderForm(partner);
+}
+
+sb.auth.onAuthStateChange((_event, session)=>{ if(!session) renderAuth(); });
+start();
 </script>
 </body>
 </html>

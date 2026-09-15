@@ -118,6 +118,11 @@ function renderAuth(){
           showMsg("This invite link is no longer valid — ask PackUp for a fresh one.");
           return;
         }
+        // onAuthStateChange can fire (and render the dashboard) before the
+        // claim above finishes, showing a stale "not linked" screen — force
+        // a fresh render now that the partner row is actually claimed.
+        renderDashboard();
+        return;
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password });
         if(error){ showMsg(error.message); return; }
@@ -156,7 +161,7 @@ async function renderDashboard(){
         <div class="label">${esc(partner.name)}</div>
         <div class="mono" style="font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:4px">${money(partner.balance_cents)}</div>
         <div class="mono muted" style="font-size:10px;margin-top:2px">WALLET BALANCE</div>
-        <a class="btn btn-primary" style="margin-top:16px" href="partner-topup.html?partner=${partner.id}">ADD FUNDS</a>
+        <a class="btn btn-primary" style="margin-top:16px" href="partner-topup.html">ADD FUNDS</a>
       </div>
       <div>
         <div class="label">Leads sent to you (${(leads||[]).length})</div>
