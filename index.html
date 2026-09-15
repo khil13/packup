@@ -109,6 +109,7 @@ let session = null;
 let settings = null;
 let leads = [];
 let partners = [];
+let funnelStats = null;
 let tab = "board";
 let openLeadId = null;
 
@@ -204,10 +205,11 @@ function partnerMailto(l, p, est){
    DATA LAYER
 ============================================================ */
 async function loadAll(){
-  const [{data:st}, {data:ld, error}, {data:pt}] = await Promise.all([
+  const [{data:st}, {data:ld, error}, {data:pt}, {data:fs}] = await Promise.all([
     sb.from("company_settings").select("*").maybeSingle(),
     sb.from("leads").select("*").order("created_at",{ascending:false}),
     sb.from("partners").select("*").order("created_at",{ascending:false}),
+    sb.rpc("get_lead_funnel_stats"),
   ]);
   if(error) console.warn(error);
   settings = st || { company:"My Moving Co", phone:"", hourly_per_mover:62,
@@ -216,6 +218,7 @@ async function loadAll(){
     lead_price_xlarge:24, lead_price_distance_surcharge:6 };
   leads = ld || [];
   partners = pt || [];
+  funnelStats = (fs && fs[0]) || null;
 }
 async function createPartner(row){
   const { data, error } = await sb.from("partners").insert(row).select().single();
@@ -410,6 +413,14 @@ function board(){
         </div>`).join("")}
       </div>
     </div>
+    ${funnelStats?`<div class="card pad">
+      <div class="label">Website funnel (7 days)</div>
+      <div class="grid2">
+        <div><div class="mono" style="font-size:22px;font-weight:700">${funnelStats.views_7d}</div><div class="mono muted" style="font-size:10px">form visits</div></div>
+        <div><div class="mono" style="font-size:22px;font-weight:700;color:var(--stamp)">${funnelStats.requests_7d}</div><div class="mono muted" style="font-size:10px">requests submitted</div></div>
+      </div>
+      <div class="mono muted" style="font-size:10px;margin-top:8px">${funnelStats.views_7d?Math.round(funnelStats.requests_7d/funnelStats.views_7d*100):0}% of visitors submitted a request</div>
+    </div>`:""}
     <div class="card pad">
       <div class="label">Where the work is</div>
       <div class="stack" style="--s:8px">
