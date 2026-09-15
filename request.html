@@ -23,6 +23,11 @@
   input:focus,textarea:focus{border-color:var(--ink)}
   .tape{height:6px;background:var(--tape)}
   .wrap{max-width:520px;margin:0 auto}
+  @media (min-width:880px){
+    .wrap.formview{max-width:920px}
+    main.layout{display:grid;grid-template-columns:1fr 380px;gap:32px;align-items:start}
+    main.layout>*+*{margin-top:0}
+  }
   .pad{padding:20px}
   .mono{font-family:var(--mono)}
   .label{font-family:var(--mono);color:var(--ink60);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
@@ -143,6 +148,7 @@ function header(){
 }
 
 function renderError(msg){
+  app.classList.remove("formview");
   app.innerHTML = `${header()}<main><div class="card pad"><p class="err">${esc(msg)}</p></div></main>`;
 }
 
@@ -154,53 +160,58 @@ function renderForm(){
 
   const draw = () => {
     const est = estimate(q, rates);
+    app.classList.add("formview");
     app.innerHTML = `${header()}
-    <main class="stack5">
-      <div>
-        <div class="label">Home size</div>
-        <div class="row" style="flex-wrap:wrap" data-grp="home_size">
-          ${Object.entries(SIZES).map(([k,v])=>optChip(k,v.label,q.home_size===k)).join("")}
-        </div>
-      </div>
-      <div class="grid2">
-        <div><div class="label">Move type</div><div class="row" data-grp="move_type">
-          ${optChip("local","LOCAL",q.move_type==="local")}
-          ${optChip("long","LONG",q.move_type==="long")}
-        </div></div>
-        <div><div class="label">Distance · ${q.miles} mi</div>
-          <input type="range" min="1" max="${q.move_type==="local"?60:3000}" value="${q.miles}" id="miles"/></div>
-      </div>
-      <div>
-        <div class="label">Access</div>
-        <div class="row" style="flex-wrap:wrap" data-grp="access">
-          ${Object.entries(ACCESS).map(([k,v])=>optChip(k,v.label,q.access===k)).join("")}
-        </div>
-      </div>
-      <div>
-        <div class="label">Packing service</div>
-        <div class="row" data-grp="packing">
-          ${optChip("no","THEY PACK",!q.packing)}
-          ${optChip("yes","WE PACK",q.packing)}
-        </div>
-      </div>
-      <div class="ticket">
-        <div class="head"><span>Estimate ticket</span><span>${new Date().toLocaleDateString()}</span></div>
-        <div class="pad" style="padding-bottom:12px">
-          <div class="grid2" style="margin-bottom:16px">
-            <div><div class="label">Est. weight</div><div class="mono" style="font-size:16px">${est.lbs.toLocaleString()} lbs</div></div>
-            <div><div class="label">Crew</div><div class="mono" style="font-size:16px">${est.crew} movers</div></div>
+    <main class="stack5 layout">
+      <div class="formCol stack5">
+        <div>
+          <div class="label">Home size</div>
+          <div class="row" style="flex-wrap:wrap" data-grp="home_size">
+            ${Object.entries(SIZES).map(([k,v])=>optChip(k,v.label,q.home_size===k)).join("")}
           </div>
-          <div class="stack" style="margin-bottom:16px">
-            ${est.lines.map(([l,v])=>`<div class="row mono" style="justify-content:space-between;font-size:12px"><span class="muted">${l}</span><span>${money(v)}</span></div>`).join("")}
+        </div>
+        <div class="grid2">
+          <div><div class="label">Move type</div><div class="row" data-grp="move_type">
+            ${optChip("local","LOCAL",q.move_type==="local")}
+            ${optChip("long","LONG",q.move_type==="long")}
+          </div></div>
+          <div><div class="label">Distance · ${q.miles} mi</div>
+            <input type="range" min="1" max="${q.move_type==="local"?60:3000}" value="${q.miles}" id="miles"/></div>
+        </div>
+        <div>
+          <div class="label">Access</div>
+          <div class="row" style="flex-wrap:wrap" data-grp="access">
+            ${Object.entries(ACCESS).map(([k,v])=>optChip(k,v.label,q.access===k)).join("")}
           </div>
-          <div style="border-top:2px dashed var(--line);padding-top:12px">
-            <div class="label">Typical cost range</div>
-            <div class="mono" style="font-size:30px;font-weight:700;letter-spacing:-.02em">${money(est.low)}<span class="muted"> – </span>${money(est.high)}</div>
-            <div class="mono muted" style="font-size:10px;margin-top:4px">This is a general estimate for planning purposes and does not represent a price from PackUp. Your matched moving company will confirm final pricing.</div>
+        </div>
+        <div>
+          <div class="label">Packing service</div>
+          <div class="row" data-grp="packing">
+            ${optChip("no","THEY PACK",!q.packing)}
+            ${optChip("yes","WE PACK",q.packing)}
           </div>
         </div>
       </div>
-      ${capturing ? captureForm() : `<button class="btn btn-dark" id="capBtn">REQUEST A MOVER MATCH</button>`}
+      <div class="summaryCol stack5">
+        <div class="ticket">
+          <div class="head"><span>Estimate ticket</span><span>${new Date().toLocaleDateString()}</span></div>
+          <div class="pad" style="padding-bottom:12px">
+            <div class="grid2" style="margin-bottom:16px">
+              <div><div class="label">Est. weight</div><div class="mono" style="font-size:16px">${est.lbs.toLocaleString()} lbs</div></div>
+              <div><div class="label">Crew</div><div class="mono" style="font-size:16px">${est.crew} movers</div></div>
+            </div>
+            <div class="stack" style="margin-bottom:16px">
+              ${est.lines.map(([l,v])=>`<div class="row mono" style="justify-content:space-between;font-size:12px"><span class="muted">${l}</span><span>${money(v)}</span></div>`).join("")}
+            </div>
+            <div style="border-top:2px dashed var(--line);padding-top:12px">
+              <div class="label">Typical cost range</div>
+              <div class="mono" style="font-size:30px;font-weight:700;letter-spacing:-.02em">${money(est.low)}<span class="muted"> – </span>${money(est.high)}</div>
+              <div class="mono muted" style="font-size:10px;margin-top:4px">This is a general estimate for planning purposes and does not represent a price from PackUp. Your matched moving company will confirm final pricing.</div>
+            </div>
+          </div>
+        </div>
+        ${capturing ? captureForm() : `<button class="btn btn-dark" id="capBtn">REQUEST A MOVER MATCH</button>`}
+      </div>
     </main>`;
 
     app.querySelectorAll("[data-grp]").forEach(g=>{
@@ -285,6 +296,7 @@ function renderForm(){
 }
 
 function renderThanks(est){
+  app.classList.remove("formview");
   app.innerHTML = `${header()}
   <main>
     <div class="card pad" style="text-align:center">
