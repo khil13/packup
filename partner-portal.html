@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#E3D6BB" />
+<title>Partner Portal</title>
+<style>
+  :root{
+    --kraft:#E3D6BB; --kraftDeep:#D3C09C; --kraftLight:#EFE6D2;
+    --ink:#17150F; --ink60:#5C5647; --line:#B9A67E;
+    --tape:#F0821E; --tapeDeep:#C4630D; --stamp:#1F4D46; --void:#8C3A22;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--kraft);color:var(--ink);font-family:var(--sans)}
+  body{min-height:100vh;min-height:100dvh}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input{font-family:var(--mono);font-size:14px;width:100%;
+    padding:12px;border:1px solid var(--line);background:var(--kraftLight);color:var(--ink);outline:none}
+  input:focus{border-color:var(--ink)}
+  .tape{height:6px;background:var(--tape)}
+  .wrap{max-width:560px;margin:0 auto}
+  .pad{padding:20px}
+  .mono{font-family:var(--mono)}
+  .label{font-family:var(--mono);color:var(--ink60);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .card{background:var(--kraftLight);border:1px solid var(--line)}
+  .row{display:flex;gap:8px}
+  .btn{padding:14px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-primary{background:var(--tape);color:var(--ink)}
+  .btn-dark{background:var(--ink);color:var(--kraft)}
+  .btn-ghost{border:1px solid var(--line)}
+  .btn:disabled{background:var(--kraftDeep);cursor:not-allowed}
+  .hidden{display:none!important}
+  .stack>*+*{margin-top:12px}
+  .stack5>*+*{margin-top:20px}
+  h1{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .muted{color:var(--ink60)}
+  header{display:flex;align-items:flex-end;justify-content:space-between;padding:24px 20px 16px;border-bottom:1px solid var(--line)}
+  main{padding:20px 20px 60px}
+  .err{color:var(--void);font-size:13px}
+  .stagetag{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--kraftLight);padding:4px 8px;display:inline-block}
+  .leadrow{padding:12px;border:1px solid var(--line);background:var(--kraftLight)}
+  .txrow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .txrow:last-child{border-bottom:none}
+  .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:sp 0.8s linear infinite;margin:40px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="tape"></div>
+<div id="app" class="wrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL = "https://hkysddnwwdrabfakmmdk.supabase.co";
+const SB_KEY = "sb_publishable_fbJw86MrQjxIFb-0-lTMKw_9cWDWheP";
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+const $ = (id) => document.getElementById(id);
+const app = $("app");
+const esc = (s) => String(s==null?"":s).replace(/[&<>"']/g, m => (
+  {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const money = (cents) => "$" + (Math.round(cents||0)/100).toFixed(2);
+const STAGE_COLOR = {new:"#F0821E",quoted:"#17150F",booked:"#1F4D46",lost:"#8C3A22"};
+const SIZES = {studio:"Studio",br1:"1 bedroom",br2:"2 bedroom",br3:"3 bedroom",br4:"4+ bedroom"};
+
+const params = new URLSearchParams(location.search);
+const inviteId = params.get("partner");
+let session = null;
+
+function header(right){
+  return `<header>
+    <div>
+      <h1>Pack<span style="color:var(--tapeDeep)">Up</span></h1>
+      <div class="label" style="margin-top:4px">Partner portal</div>
+    </div>
+    ${right||""}
+  </header>`;
+}
+
+/* ---------------- AUTH SCREEN ---------------- */
+function renderAuth(){
+  const creating = !!inviteId;
+  app.innerHTML = `${header()}
+    <main class="stack5">
+      <div class="card pad stack">
+        <div class="label">${creating?"Create your partner account":"Sign in"}</div>
+        <div><div class="label">Email</div><input id="email" type="email" autocomplete="username" placeholder="you@example.com"/></div>
+        <div><div class="label">Password</div><input id="pw" type="password" autocomplete="${creating?"new-password":"current-password"}" placeholder="At least 6 characters"/></div>
+        <button class="btn btn-primary" id="go">${creating?"CREATE ACCOUNT":"SIGN IN"}</button>
+        ${!creating?`<p class="muted" style="font-size:12px">New here? You'll need an invite link from PackUp to create an account.</p>`:""}
+        <div id="msg" class="err hidden"></div>
+      </div>
+    </main>`;
+
+  const msg = $("msg");
+  const showMsg = (t) => { msg.textContent=t; msg.classList.remove("hidden"); };
+
+  $("go").onclick = async () => {
+    const email = $("email").value.trim();
+    const password = $("pw").value;
+    if(!email || password.length<6){ showMsg("Enter an email and a password of 6+ characters."); return; }
+    const btn = $("go"); btn.disabled = true; btn.textContent = "…";
+    try{
+      if(creating){
+        const { data, error } = await sb.auth.signUp({ email, password, options:{ data:{ signup_role:"partner" } } });
+        if(error){ showMsg(error.message); return; }
+        if(!data.session){
+          showMsg("Account created — confirm the link we emailed you, then reopen this same invite link to finish setup.");
+          return;
+        }
+        session = data.session;
+        const claimed = await sb.rpc("claim_partner_account", { p_partner_id: inviteId });
+        if(claimed.error || !claimed.data){
+          showMsg("This invite link is no longer valid — ask PackUp for a fresh one.");
+          return;
+        }
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if(error){ showMsg(error.message); return; }
+      }
+      // onAuthStateChange picks up the rest
+    } finally {
+      btn.disabled = false; btn.textContent = creating?"CREATE ACCOUNT":"SIGN IN";
+    }
+  };
+}
+
+/* ---------------- DASHBOARD ---------------- */
+async function renderDashboard(){
+  app.innerHTML = `<div class="spin"></div>`;
+
+  const { data: partner, error: perr } = await sb.from("partners").select("*").eq("partner_user_id", session.user.id).maybeSingle();
+
+  if(perr || !partner){
+    app.innerHTML = `${header(`<button class="mono muted" id="out" style="font-size:10px;letter-spacing:.1em">SIGN OUT</button>`)}
+      <main><div class="card pad">
+        <p style="font-size:14px">No partner account is linked to this login yet.</p>
+        <p class="muted" style="font-size:13px;margin-top:8px">Ask PackUp for your invite link to connect this login to your account.</p>
+      </div></main>`;
+    $("out").onclick = () => sb.auth.signOut();
+    return;
+  }
+
+  const [{ data: leads }, { data: txs }] = await Promise.all([
+    sb.from("leads").select("*").eq("partner_id", partner.id).order("sent_at",{ascending:false}),
+    sb.from("wallet_transactions").select("*").eq("partner_id", partner.id).order("created_at",{ascending:false}),
+  ]);
+
+  app.innerHTML = `${header(`<button class="mono muted" id="out" style="font-size:10px;letter-spacing:.1em">SIGN OUT</button>`)}
+    <main class="stack5">
+      <div class="card pad">
+        <div class="label">${esc(partner.name)}</div>
+        <div class="mono" style="font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:4px">${money(partner.balance_cents)}</div>
+        <div class="mono muted" style="font-size:10px;margin-top:2px">WALLET BALANCE</div>
+        <a class="btn btn-primary" style="margin-top:16px" href="partner-topup.html?partner=${partner.id}">ADD FUNDS</a>
+      </div>
+      <div>
+        <div class="label">Leads sent to you (${(leads||[]).length})</div>
+        <div class="stack" style="--s:8px">
+          ${(leads&&leads.length) ? leads.map(l=>`<div class="leadrow">
+            <div class="row" style="justify-content:space-between;align-items:flex-start">
+              <div>
+                <div style="font-weight:600;font-size:15px">${esc(l.name)}</div>
+                <div class="mono muted" style="font-size:11px;margin-top:2px">${SIZES[l.home_size]||"—"} · ${l.area?esc(l.area):"area not set"}</div>
+              </div>
+              <span class="stagetag" style="background:${STAGE_COLOR[l.stage]||"#5C5647"}">${esc(l.stage||"")}</span>
+            </div>
+            <div class="mono" style="font-size:12px;margin-top:8px">${l.phone?esc(l.phone):""}${l.phone&&l.email?" · ":""}${l.email?esc(l.email):""}</div>
+            ${l.sent_at?`<div class="mono muted" style="font-size:10px;margin-top:4px">Sent ${new Date(l.sent_at).toLocaleDateString()}${l.charged_cents?` · ${money(l.charged_cents)}`:""}</div>`:""}
+          </div>`).join("") : `<p class="muted" style="font-size:13px">No leads yet.</p>`}
+        </div>
+      </div>
+      <div class="card pad">
+        <div class="label">Wallet history</div>
+        ${(txs&&txs.length) ? txs.map(t=>`<div class="txrow">
+          <span class="muted">${t.kind==="topup"?"Top-up":t.kind==="lead_charge"?"Lead charge":"Adjustment"}${t.note?` — ${esc(t.note)}`:""}</span>
+          <span class="mono" style="color:${t.amount_cents>=0?"var(--stamp)":"var(--void)"}">${t.amount_cents>=0?"+":""}${money(t.amount_cents)}</span>
+        </div>`).join("") : `<p class="muted" style="font-size:13px">No activity yet.</p>`}
+      </div>
+    </main>`;
+  $("out").onclick = () => sb.auth.signOut();
+}
+
+sb.auth.onAuthStateChange((_event, s)=>{
+  const wasIn = !!session;
+  session = s;
+  if(session && !wasIn) renderDashboard();
+  else if(!session) renderAuth();
+});
+
+(async () => {
+  app.innerHTML = `<div class="spin"></div>`;
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  if(session) renderDashboard(); else renderAuth();
+})();
+</script>
+</body>
+</html>
