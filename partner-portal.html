@@ -118,6 +118,11 @@ function renderAuth(){
           showMsg("This invite link is no longer valid — ask PackUp for a fresh one.");
           return;
         }
+        // onAuthStateChange can fire (and render the dashboard) before the
+        // claim above finishes, showing a stale "not linked" screen — force
+        // a fresh render now that the partner row is actually claimed.
+        renderDashboard();
+        return;
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password });
         if(error){ showMsg(error.message); return; }
