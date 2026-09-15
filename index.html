@@ -315,7 +315,9 @@ function renderThanks(est){
   </main>`;
 }
 
-sb.rpc("log_page_view", { p_path: "request.html" }); // fire-and-forget visit log, never blocks the page
+// sb.rpc(...) is a lazy "thenable" — the fetch only actually fires once .then()
+// is called, so a bare statement here would silently never send the request
+sb.rpc("log_page_view", { p_path: "request.html" }).then(()=>{}, ()=>{});
 
 (async () => {
   app.innerHTML = `<div class="spin"></div>`;
