@@ -167,6 +167,15 @@ function estimate(input, s){
     lines:lines.map(([l,v])=>[l,Math.round(v)]) };
 }
 
+/* ---- lead price for a partner handoff: bigger homes & longer moves cost more ---- */
+const SIZE_PRICE = { studio:12, br1:12, br2:15, br3:19, br4:24 };
+function leadPrice(l){
+  let cents = (SIZE_PRICE[l.home_size] ?? 12) * 100;
+  if(l.move_type === "long") cents += 600;
+  else if((l.miles||0) > 30) cents += 400;
+  return cents; // in cents
+}
+
 /* ---- partner handoff email ---- */
 function partnerMailto(l, p, est){
   const subject = `New moving lead — ${l.name}${l.area?` (${l.area})`:""}`;
@@ -207,6 +216,16 @@ async function createPartner(row){
   const { data, error } = await sb.from("partners").insert(row).select().single();
   if(error){ toast(error.message); return null; }
   partners.unshift(data); return data;
+}
+async function patchPartner(id, patch){
+  const { data, error } = await sb.from("partners").update(patch).eq("id",id).select().single();
+  if(error){ toast(error.message); return null; }
+  const i = partners.findIndex(p=>p.id===id); if(i>-1) partners[i]=data;
+  return data;
+}
+async function createWalletTransaction(row){
+  const { error } = await sb.from("wallet_transactions").insert(row);
+  if(error) toast(error.message);
 }
 async function removePartner(id){
   const { error } = await sb.from("partners").delete().eq("id",id);
@@ -560,11 +579,12 @@ function leadDetail(id){
       <div class="card pad">
         <div class="label">Hand off to partner</div>
         ${(l.partner_id && !choosingPartner) ? `
-          <p style="font-size:14px">Sent to <b>${esc(partner?partner.name:"a removed partner")}</b>${l.sent_at?` on ${new Date(l.sent_at).toLocaleDateString()}`:""}.</p>
+          <p style="font-size:14px">Sent to <b>${esc(partner?partner.name:"a removed partner")}</b>${l.sent_at?` on ${new Date(l.sent_at).toLocaleDateString()}`:""}${l.charged_cents?` for $${(l.charged_cents/100).toFixed(2)}`:""}.</p>
           <button class="btn btn-ghost" id="resendPartner" style="margin-top:12px">SEND TO A DIFFERENT PARTNER</button>
         ` : partners.length ? `
+          <p class="mono muted" style="font-size:11px;margin-bottom:8px">This lead is priced at $${(leadPrice(l)/100).toFixed(2)} — bigger homes and longer moves cost more.</p>
           <select id="partnerPick">
-            ${partners.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}
+            ${partners.map(p=>`<option value="${p.id}">${esc(p.name)} — $${(p.balance_cents/100).toFixed(2)} available</option>`).join("")}
           </select>
           <button class="btn btn-dark" id="sendPartner" style="margin-top:12px">SEND TO PARTNER</button>
         ` : `<p class="muted" style="font-size:13px">No partners added yet — add one in Setup.</p>`}
@@ -586,9 +606,18 @@ function leadDetail(id){
     if(sendBtn) sendBtn.onclick = async () => {
       const p = partners.find(x=>x.id===el.querySelector("#partnerPick").value);
       if(!p) return;
+      const price = leadPrice(l);
+      if(p.balance_cents < price){
+        toast(`${p.name} only has $${(p.balance_cents/100).toFixed(2)} — this lead costs $${(price/100).toFixed(2)}. Add funds in Setup first.`);
+        return;
+      }
+      sendBtn.disabled = true;
       const sent_at = new Date().toISOString();
-      await patchLead(id, {partner_id:p.id, sent_at});
-      Object.assign(l, {partner_id:p.id, sent_at});
+      const newBalance = p.balance_cents - price;
+      await patchPartner(p.id, {balance_cents:newBalance});
+      await createWalletTransaction({partner_id:p.id, amount_cents:-price, kind:"lead_charge", lead_id:id});
+      await patchLead(id, {partner_id:p.id, sent_at, charged_cents:price});
+      Object.assign(l, {partner_id:p.id, sent_at, charged_cents:price});
       choosingPartner = false;
       window.location.href = partnerMailto(l, p, est);
       view();
@@ -872,14 +901,17 @@ function setupView(){
       </div>
       <div class="card pad">
         <div class="label">Partner movers</div>
-        <p class="muted" style="font-size:13px;margin-bottom:12px">Licensed companies you hand leads off to. Verify each one's NJ Public Mover License before adding them.</p>
+        <p class="muted" style="font-size:13px;margin-bottom:12px">Licensed companies you hand leads off to. Verify each one's NJ Public Mover License before adding them. $75 minimum to start receiving leads; $12–$25+ per lead depending on job size.</p>
         <div class="stack" style="--s:8px" id="partnerList">
           ${partners.length ? partners.map(p=>`<div class="leadrow" style="cursor:default">
             <div style="flex:1;min-width:0">
               <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</div>
               <div class="mono muted" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.license_number?`Lic. ${esc(p.license_number)}`:"No license # on file"}${p.contact_email?` · ${esc(p.contact_email)}`:""}${p.contact_phone?` · ${esc(p.contact_phone)}`:""}</div>
             </div>
-            <button data-del-partner="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">DELETE</button>
+            <div style="text-align:right">
+              <div class="mono" style="font-size:13px;font-weight:700;color:${p.balance_cents>0?"var(--stamp)":"var(--void)"}">$${(p.balance_cents/100).toFixed(2)}</div>
+              <button data-del-partner="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">DELETE</button>
+            </div>
           </div>`).join("") : `<span class="mono muted" style="font-size:11px">No partners added yet.</span>`}
         </div>
         <div class="stack" style="margin-top:12px">
@@ -891,6 +923,18 @@ function setupView(){
           <input id="pEmail" type="email" inputmode="email" placeholder="Email for handoffs"/>
           <button class="btn btn-primary" id="addPartner">ADD PARTNER</button>
         </div>
+        ${partners.length ? `<div style="border-top:2px dashed var(--line);margin-top:16px;padding-top:16px">
+          <div class="label">Record a top-up</div>
+          <p class="muted" style="font-size:12px;margin-bottom:8px">Until card payments are wired up, log what a partner paid you (Zelle, Venmo, check) here.</p>
+          <div class="stack">
+            <select id="tuPartner">${partners.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>
+            <div class="grid2">
+              <input id="tuAmount" type="number" min="1" step="0.01" placeholder="Amount ($)"/>
+              <input id="tuNote" placeholder="Note (optional)"/>
+            </div>
+            <button class="btn btn-dark" id="recordTopup">RECORD TOP-UP</button>
+          </div>
+        </div>` : ""}
       </div>
       <div class="card pad">
         <div class="label">Account</div>
@@ -958,6 +1002,21 @@ function setupView(){
         contact_phone:phone, contact_email:email,
       });
       if(ok){ toast("Partner added."); draw(); }
+    };
+    const recordTopup = el.querySelector("#recordTopup");
+    if(recordTopup) recordTopup.onclick = async () => {
+      const pid = el.querySelector("#tuPartner").value;
+      const p = partners.find(x=>x.id===pid);
+      if(!p) return;
+      const amount = Number(el.querySelector("#tuAmount").value);
+      if(!amount || amount <= 0){ toast("Enter a valid amount."); return; }
+      if(p.balance_cents===0 && amount < 75){ toast("First top-up needs to be at least $75."); return; }
+      const cents = Math.round(amount*100);
+      const note = el.querySelector("#tuNote").value.trim();
+      await patchPartner(p.id, {balance_cents:p.balance_cents+cents});
+      await createWalletTransaction({partner_id:p.id, amount_cents:cents, kind:"topup", note:note||null});
+      toast(`Added $${amount.toFixed(2)} to ${p.name}.`);
+      draw();
     };
     const wipe = el.querySelector("#wipe");
     if(wipe) wipe.onclick=()=>{ confirmWipe=true; draw(); };
