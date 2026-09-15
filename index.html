@@ -929,7 +929,7 @@ function setupView(){
             <div style="text-align:right">
               <div class="mono" style="font-size:13px;font-weight:700;color:${p.balance_cents>0?"var(--stamp)":"var(--void)"}">$${(p.balance_cents/100).toFixed(2)}</div>
               <div class="row" style="gap:10px;justify-content:flex-end;margin-top:2px">
-                <button data-topup-link="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">COPY TOP-UP LINK</button>
+                <button data-portal-link="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">COPY PORTAL LINK</button>
                 <button data-del-partner="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">DELETE</button>
               </div>
             </div>
@@ -1016,11 +1016,11 @@ function setupView(){
     el.querySelectorAll("[data-del-partner]").forEach(b=>b.onclick=async()=>{
       await removePartner(b.dataset.delPartner); draw();
     });
-    el.querySelectorAll("[data-topup-link]").forEach(b=>b.onclick=async()=>{
-      const url = `${location.origin}/partner-topup.html?partner=${b.dataset.topupLink}`;
+    el.querySelectorAll("[data-portal-link]").forEach(b=>b.onclick=async()=>{
+      const url = `${location.origin}/partner-portal.html?partner=${b.dataset.portalLink}`;
       try{ await navigator.clipboard.writeText(url); b.textContent="COPIED"; }
       catch{ b.textContent="COPY FAILED"; }
-      setTimeout(()=>{ b.textContent="COPY TOP-UP LINK"; }, 1500);
+      setTimeout(()=>{ b.textContent="COPY PORTAL LINK"; }, 1500);
     });
     el.querySelector("#addPartner").onclick = async () => {
       const name = el.querySelector("#pName").value.trim();
