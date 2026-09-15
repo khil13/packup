@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#E3D6BB" />
-<title>Get a Moving Quote</title>
+<title>Compare Moving Costs</title>
 <style>
   :root{
     --kraft:#E3D6BB; --kraftDeep:#D3C09C; --kraftLight:#EFE6D2;
@@ -134,9 +134,12 @@ let rates = null;
 
 function header(){
   return `<header>
-    <h1>${rates&&rates.company ? esc(rates.company) : "Get a moving quote"}</h1>
-    <div class="label" style="margin-top:6px">Instant estimate · no obligation</div>
-  </header>`;
+    <h1>${rates&&rates.company ? esc(rates.company) : "Compare moving costs"}</h1>
+    <div class="label" style="margin-top:6px">Free estimate · matched with a licensed local mover</div>
+  </header>
+  <div class="mono muted" style="font-size:11px;padding:16px 20px 0;line-height:1.5">
+    We're a referral service, not a moving company — we don't move your things ourselves. Tell us about your move and we'll connect you with an independent, licensed local mover who'll confirm final pricing.
+  </div>`;
 }
 
 function renderError(msg){
@@ -191,13 +194,13 @@ function renderForm(){
             ${est.lines.map(([l,v])=>`<div class="row mono" style="justify-content:space-between;font-size:12px"><span class="muted">${l}</span><span>${money(v)}</span></div>`).join("")}
           </div>
           <div style="border-top:2px dashed var(--line);padding-top:12px">
-            <div class="label">Quote range</div>
+            <div class="label">Typical cost range</div>
             <div class="mono" style="font-size:30px;font-weight:700;letter-spacing:-.02em">${money(est.low)}<span class="muted"> – </span>${money(est.high)}</div>
-            <div class="mono muted" style="font-size:10px;margin-top:4px">Non-binding. Confirm after a walkthrough.</div>
+            <div class="mono muted" style="font-size:10px;margin-top:4px">A general estimate, not a price from us. Your matched mover will confirm final pricing.</div>
           </div>
         </div>
       </div>
-      ${capturing ? captureForm() : `<button class="btn btn-dark" id="capBtn">SEND ME THIS QUOTE</button>`}
+      ${capturing ? captureForm() : `<button class="btn btn-dark" id="capBtn">GET MATCHED WITH A MOVER</button>`}
     </main>`;
 
     app.querySelectorAll("[data-grp]").forEach(g=>{
@@ -218,7 +221,7 @@ function renderForm(){
 
   function captureForm(){
     return `<div class="card pad stack">
-      <div class="label">Where should we send it?</div>
+      <div class="label">Where should your mover match go?</div>
       <div><div class="label">Name</div><input id="cName" value="${esc(who.name)}" placeholder="Full name"/></div>
       <div class="grid2">
         <div><div class="label">Phone</div><input id="cPhone" type="tel" inputmode="tel" value="${esc(who.phone)}" placeholder="555-0100"/></div>
@@ -233,7 +236,7 @@ function renderForm(){
       </div>
       <div id="cMsg" class="err hidden"></div>
       <div class="row">
-        <button class="btn btn-primary" id="cSave" style="flex:1">✓ REQUEST THIS QUOTE</button>
+        <button class="btn btn-primary" id="cSave" style="flex:1">✓ GET MATCHED</button>
         <button class="btn btn-ghost" id="cBack" style="padding-left:20px;padding-right:20px">BACK</button>
       </div>
     </div>`;
@@ -273,7 +276,7 @@ function renderForm(){
         p_access: q.access, p_packing: q.packing, p_notes: `Heard about us via: ${who.source}`,
         p_quote_low: est.low, p_quote_high: est.high,
       });
-      if(error){ showErr("Something went wrong — try again, or call us directly."); save.disabled=false; save.textContent="✓ REQUEST THIS QUOTE"; return; }
+      if(error){ showErr("Something went wrong — try again, or call us directly."); save.disabled=false; save.textContent="✓ GET MATCHED"; return; }
       renderThanks(est);
     };
   }
@@ -286,8 +289,8 @@ function renderThanks(est){
   <main>
     <div class="card pad" style="text-align:center">
       <p style="font-size:18px;font-weight:700;margin-bottom:8px">Got it — thanks!</p>
-      <p class="muted" style="font-size:14px;margin-bottom:16px">We'll follow up shortly about your ${money(est.low)}–${money(est.high)} estimate.</p>
-      ${rates&&rates.phone?`<a class="btn btn-dark" href="tel:${esc(rates.phone)}">CALL US NOW · ${esc(rates.phone)}</a>`:""}
+      <p class="muted" style="font-size:14px;margin-bottom:16px">A licensed local mover will reach out shortly to confirm pricing for your ${money(est.low)}–${money(est.high)} estimated move.</p>
+      ${rates&&rates.phone?`<a class="btn btn-dark" href="tel:${esc(rates.phone)}">QUESTIONS? CALL US · ${esc(rates.phone)}</a>`:""}
     </div>
   </main>`;
 }
