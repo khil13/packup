@@ -1,6 +1,10 @@
-# The bare domain root previously fell through to index.html (the owner's
-# private login/dashboard) since there was no routing config at all — most
-# visitors (organic search, shared links without a full path) never saw the
-# actual lead-capture form at /request.html. Send root traffic there
-# instead; index.html itself is still reachable at its own explicit path.
-/    /request.html   301
+# Netlify serves a physical index.html at "/" via its own default-document
+# handling *before* consulting redirect rules for that same exact path —
+# a "/  /request.html  301" rule here never actually fired (confirmed live:
+# curl showed a fresh, non-cached 200 for "/", not a 301). The reliable fix
+# is what request.html now is: it was renamed to index.html so the public
+# quote form is what's physically at the root, no rule needed for "/".
+#
+# This rule only keeps old /request.html links/bookmarks (including the
+# og:url this app itself shipped before the rename) working.
+/request.html    /    301
