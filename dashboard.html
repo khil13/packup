@@ -925,7 +925,7 @@ function setupView(){
         <div class="label">Your public quote form</div>
         <p class="muted" style="font-size:13px;margin-bottom:12px">Share this link — anyone who fills it out lands in your Board as a new lead. No login needed for them.</p>
         <div class="row">
-          <input id="publicUrl" readonly value="${location.origin}/" style="flex:1"/>
+          <input id="publicUrl" readonly value="${location.origin}/?biz=${session.user.id}" style="flex:1"/>
           <button class="btn btn-primary" id="copyUrl" style="padding-left:20px;padding-right:20px">COPY</button>
         </div>
         <div id="qrWrap" style="text-align:center;margin-top:16px">
