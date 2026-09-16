@@ -80,6 +80,10 @@ const SB_URL = "https://hkysddnwwdrabfakmmdk.supabase.co";
 const SB_KEY = "sb_publishable_fbJw86MrQjxIFb-0-lTMKw_9cWDWheP";
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
+// which business this form belongs to — omitted on old/bare links, which
+// still work as long as exactly one business exists (see get_public_rates)
+const BIZ_OWNER = new URLSearchParams(location.search).get("biz") || null;
+
 const SIZES = {
   studio:{label:"Studio",crew:2,hours:3,lbs:1800},
   br1:{label:"1 bedroom",crew:2,hours:4,lbs:2600},
@@ -293,7 +297,7 @@ function renderForm(){
         p_area: app.querySelector("#cArea").value.trim() || null,
         p_home_size: q.home_size, p_move_type: q.move_type, p_miles: q.miles,
         p_access: q.access, p_packing: q.packing, p_notes: `Heard about us via: ${who.source}`,
-        p_quote_low: est.low, p_quote_high: est.high,
+        p_quote_low: est.low, p_quote_high: est.high, p_owner: BIZ_OWNER,
       });
       if(error){ showErr("We were unable to submit your request. Please try again, or call us directly."); save.disabled=false; save.textContent="✓ SUBMIT REQUEST"; return; }
       renderThanks(est);
@@ -317,11 +321,11 @@ function renderThanks(est){
 
 // sb.rpc(...) is a lazy "thenable" — the fetch only actually fires once .then()
 // is called, so a bare statement here would silently never send the request
-sb.rpc("log_page_view", { p_path: "request.html" }).then(()=>{}, ()=>{});
+sb.rpc("log_page_view", { p_path: "request.html", p_owner: BIZ_OWNER }).then(()=>{}, ()=>{});
 
 (async () => {
   app.innerHTML = `<div class="spin"></div>`;
-  const { data, error } = await sb.rpc("get_public_rates");
+  const { data, error } = await sb.rpc("get_public_rates", { p_owner: BIZ_OWNER });
   if(error || !data || !data.length){ renderError("This quote form is not yet available. Please check back soon."); return; }
   rates = data[0];
   renderForm();
