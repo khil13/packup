@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /dashboard.html
+Disallow: /partner-portal.html
+Disallow: /partner-topup.html
+Allow: /
+
+Sitemap: https://packupleads.com/sitemap.xml
