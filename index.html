@@ -13,6 +13,21 @@
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Compare Moving Costs | PackUp" />
 <meta name="twitter:description" content="Get a free moving cost estimate and get matched with a licensed local moving company. No account needed, no bidding war." />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "PackUp",
+  "description": "PackUp is a referral service that matches you with a licensed, independent local moving company and does not perform moves itself.",
+  "url": "https://packupleads.com/",
+  "telephone": "+18622150984",
+  "email": "packupleads@gmail.com",
+  "areaServed": {
+    "@type": "AdministrativeArea",
+    "name": "Essex County, NJ"
+  }
+}
+</script>
 <style>
   :root{
     --kraft:#E3D6BB; --kraftDeep:#D3C09C; --kraftLight:#EFE6D2;
@@ -82,7 +97,14 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
 
 // which business this form belongs to — omitted on old/bare links, which
 // still work as long as exactly one business exists (see get_public_rates)
-const BIZ_OWNER = new URLSearchParams(location.search).get("biz") || null;
+const urlParams = new URLSearchParams(location.search);
+const BIZ_OWNER = urlParams.get("biz") || null;
+
+// standard campaign-tracking params, passed straight through to the lead
+// so we can tell which channel (ad, partner link, flyer QR code) it came from
+const UTM_SOURCE = urlParams.get("utm_source") || null;
+const UTM_MEDIUM = urlParams.get("utm_medium") || null;
+const UTM_CAMPAIGN = urlParams.get("utm_campaign") || null;
 
 const SIZES = {
   studio:{label:"Studio",crew:2,hours:3,lbs:1800},
@@ -298,6 +320,7 @@ function renderForm(){
         p_home_size: q.home_size, p_move_type: q.move_type, p_miles: q.miles,
         p_access: q.access, p_packing: q.packing, p_notes: `Heard about us via: ${who.source}`,
         p_quote_low: est.low, p_quote_high: est.high, p_owner: BIZ_OWNER,
+        p_utm_source: UTM_SOURCE, p_utm_medium: UTM_MEDIUM, p_utm_campaign: UTM_CAMPAIGN,
       });
       if(error){ showErr("We were unable to submit your request. Please try again, or call us directly."); save.disabled=false; save.textContent="✓ SUBMIT REQUEST"; return; }
       renderThanks(est);
