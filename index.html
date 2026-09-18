@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#E3D6BB" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="preconnect" href="https://hkysddnwwdrabfakmmdk.supabase.co" />
 <title>Compare Moving Costs | PackUp</title>
 <meta name="description" content="Get a free moving cost estimate and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
 <meta property="og:type" content="website" />
@@ -356,7 +358,9 @@ function renderThanks(est){
 sb.rpc("log_page_view", { p_path: "request.html", p_owner: BIZ_OWNER }).then(()=>{}, ()=>{});
 
 (async () => {
-  app.innerHTML = `<div class="spin"></div>`;
+  // show the header immediately instead of a bare spinner — it doesn't need
+  // the rates fetch to render, so no reason to make visitors wait on it too
+  app.innerHTML = `${header()}<main><div class="spin"></div></main>`;
   const { data, error } = await sb.rpc("get_public_rates", { p_owner: BIZ_OWNER });
   if(error || !data || !data.length){ renderError("This quote form is not yet available. Please check back soon."); return; }
   rates = data[0];
