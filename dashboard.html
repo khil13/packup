@@ -389,6 +389,15 @@ function board(){
   const maxArea = topAreas.length?topAreas[0][1]:1;
   const srcs={}; leads.forEach(l=>{ if(l.source) srcs[l.source]=(srcs[l.source]||0)+1; });
   const topSrc = Object.entries(srcs).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  // utm_source/medium only get set on website-form leads whose link was tagged
+  // (?utm_source=&utm_medium=) — this is finer-grained than "source" above,
+  // which is either "Website form" for all of those or a manually chosen bucket
+  const utms={}; leads.forEach(l=>{
+    if(!l.utm_source) return;
+    const key = l.utm_medium ? `${l.utm_source} / ${l.utm_medium}` : l.utm_source;
+    utms[key]=(utms[key]||0)+1;
+  });
+  const topUtm = Object.entries(utms).sort((a,b)=>b[1]-a[1]).slice(0,6);
 
   return `<div class="stack5">
     <div class="grid2">
@@ -435,6 +444,13 @@ function board(){
       <div class="label">How they found you</div>
       <div class="row" style="flex-wrap:wrap">
         ${topSrc.map(([s,n])=>`<div class="mono" style="padding:8px 12px;border:1px solid var(--line);font-size:11px">${esc(s)} <b style="color:var(--tapeDeep)">${n}</b></div>`).join("")}
+      </div>
+    </div>`:""}
+    ${topUtm.length?`<div class="card pad">
+      <div class="label">Traffic sources</div>
+      <p class="muted" style="font-size:12px;margin-bottom:12px">Website-form leads whose link was tagged with ?utm_source= — e.g. an ad campaign or a partner's flyer QR code.</p>
+      <div class="row" style="flex-wrap:wrap">
+        ${topUtm.map(([s,n])=>`<div class="mono" style="padding:8px 12px;border:1px solid var(--line);font-size:11px">${esc(s)} <b style="color:var(--tapeDeep)">${n}</b></div>`).join("")}
       </div>
     </div>`:""}
     <div>
