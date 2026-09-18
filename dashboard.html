@@ -215,7 +215,7 @@ async function loadAll(){
   settings = st || { company:"My Moving Co", phone:"", hourly_per_mover:62,
     travel_fee:95, long_haul_base:0.35, areas:[],
     lead_price_small:12, lead_price_medium:15, lead_price_large:19,
-    lead_price_xlarge:24, lead_price_distance_surcharge:6 };
+    lead_price_xlarge:24, lead_price_distance_surcharge:6, referral_discount:50 };
   leads = ld || [];
   partners = pt || [];
   funnelStats = (fs && fs[0]) || null;
@@ -562,6 +562,7 @@ function leadDetail(id){
             <div class="mono muted" style="font-size:11px;margin-top:4px">${esc(l.area||"Area not set")} · via ${esc(l.source||"unknown")}</div>
             ${l.phone?`<div class="mono muted" style="font-size:11px;margin-top:2px">${esc(l.phone)}</div>`:""}
             ${l.email?`<div class="mono muted" style="font-size:11px;margin-top:2px">${esc(l.email)}</div>`:""}
+            ${l.referred_by_id?`<div class="mono muted" style="font-size:11px;margin-top:2px;color:var(--stamp)">Came via a ${l.referred_by_type} referral · $${l.referral_discount_applied||0} off</div>`:""}
           </div>
           ${stageTag(l.stage)}
         </div>
@@ -596,6 +597,14 @@ function leadDetail(id){
         ` : `<p class="muted" style="font-size:13px">No partners added yet — add one in Setup.</p>`}
       </div>
       <div class="card pad">
+        <div class="label">Referral link</div>
+        <p class="muted" style="font-size:12px;margin-bottom:8px">Share this with ${esc(l.name)} — whoever books through it gets $${settings.referral_discount} off their quote.</p>
+        <div class="row">
+          <input id="referralUrl" readonly value="${location.origin}/?ref=${l.id}&biz=${session.user.id}" style="flex:1"/>
+          <button class="btn btn-primary" id="copyReferral" style="padding-left:20px;padding-right:20px">COPY</button>
+        </div>
+      </div>
+      <div class="card pad">
         <div class="label">Notes</div>
         <textarea id="notes" rows="4" placeholder="Access, parking, fragile items, follow-up date…">${esc(l.notes||"")}</textarea>
       </div>
@@ -603,6 +612,12 @@ function leadDetail(id){
 
     el.querySelector("#back").onclick = () => { openLeadId=null; renderView(); syncNav(); };
     el.querySelector("#edit").onclick = () => { editing=true; edit(); };
+    el.querySelector("#copyReferral").onclick = async () => {
+      const btn = el.querySelector("#copyReferral");
+      try{ await navigator.clipboard.writeText(el.querySelector("#referralUrl").value); btn.textContent="COPIED"; }
+      catch{ el.querySelector("#referralUrl").select(); btn.textContent="SELECTED"; }
+      setTimeout(()=>{ btn.textContent="COPY"; }, 1500);
+    };
     el.querySelectorAll("[data-stage]").forEach(b=>b.onclick=async()=>{
       await patchLead(id,{stage:b.dataset.stage}); l.stage=b.dataset.stage; view();
     });
@@ -899,6 +914,11 @@ function setupView(){
         <div><div class="label">Long-haul base rate ($/lb)</div><input id="haul" type="number" step="0.01" value="${s.long_haul_base}"/></div>
       </div>
       <div class="card pad stack">
+        <div class="label">Referral program</div>
+        <p class="muted" style="font-size:12px">Past customers and partners can share a link that discounts the quote for whoever books through it. Find their link on a lead's page, or next to each partner below.</p>
+        <div><div class="label">Referral discount ($)</div><input id="referralDiscount" type="number" min="0" value="${s.referral_discount}"/></div>
+      </div>
+      <div class="card pad stack">
         <div class="label">Lead pricing — what partners pay per lead</div>
         <p class="muted" style="font-size:12px">Adjust these any time — bigger or farther jobs cost more automatically.</p>
         <div class="grid2">
@@ -946,6 +966,7 @@ function setupView(){
               <div class="mono" style="font-size:13px;font-weight:700;color:${p.balance_cents>0?"var(--stamp)":"var(--void)"}">$${(p.balance_cents/100).toFixed(2)}</div>
               <div class="row" style="gap:10px;justify-content:flex-end;margin-top:2px">
                 <button data-portal-link="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">COPY PORTAL LINK</button>
+                <button data-referral-link="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">COPY REFERRAL LINK</button>
                 <button data-del-partner="${p.id}" class="mono muted" style="font-size:10px;letter-spacing:.08em">DELETE</button>
               </div>
             </div>
@@ -1004,13 +1025,14 @@ function setupView(){
     el.querySelector("#hourly").oninput = e=>commit({hourly_per_mover:Number(e.target.value)||0});
     el.querySelector("#travel").oninput = e=>commit({travel_fee:Number(e.target.value)||0});
     el.querySelector("#haul").oninput = e=>commit({long_haul_base:Number(e.target.value)||0});
+    el.querySelector("#referralDiscount").oninput = e=>commit({referral_discount:Number(e.target.value)||0});
     el.querySelector("#lpSmall").oninput = e=>commit({lead_price_small:Number(e.target.value)||0});
     el.querySelector("#lpMedium").oninput = e=>commit({lead_price_medium:Number(e.target.value)||0});
     el.querySelector("#lpLarge").oninput = e=>commit({lead_price_large:Number(e.target.value)||0});
     el.querySelector("#lpXlarge").oninput = e=>commit({lead_price_xlarge:Number(e.target.value)||0});
     el.querySelector("#lpSurcharge").oninput = e=>commit({lead_price_distance_surcharge:Number(e.target.value)||0});
     // a fast tab-away before the timer fires still saves
-    ["#company","#phone","#hourly","#travel","#haul","#lpSmall","#lpMedium","#lpLarge","#lpXlarge","#lpSurcharge"].forEach(id=>{
+    ["#company","#phone","#hourly","#travel","#haul","#lpSmall","#lpMedium","#lpLarge","#lpXlarge","#lpSurcharge","#referralDiscount"].forEach(id=>{
       const n = el.querySelector(id); if(n) n.onblur = flush;
     });
     el.querySelectorAll("[data-area]").forEach(b=>b.onclick=async()=>{
@@ -1037,6 +1059,12 @@ function setupView(){
       try{ await navigator.clipboard.writeText(url); b.textContent="COPIED"; }
       catch{ b.textContent="COPY FAILED"; }
       setTimeout(()=>{ b.textContent="COPY PORTAL LINK"; }, 1500);
+    });
+    el.querySelectorAll("[data-referral-link]").forEach(b=>b.onclick=async()=>{
+      const url = `${location.origin}/?ref=${b.dataset.referralLink}&biz=${session.user.id}`;
+      try{ await navigator.clipboard.writeText(url); b.textContent="COPIED"; }
+      catch{ b.textContent="COPY FAILED"; }
+      setTimeout(()=>{ b.textContent="COPY REFERRAL LINK"; }, 1500);
     });
     el.querySelector("#addPartner").onclick = async () => {
       const name = el.querySelector("#pName").value.trim();

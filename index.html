@@ -106,6 +106,12 @@ const UTM_SOURCE = urlParams.get("utm_source") || null;
 const UTM_MEDIUM = urlParams.get("utm_medium") || null;
 const UTM_CAMPAIGN = urlParams.get("utm_campaign") || null;
 
+// referral link — the shared code is just the referrer's own lead or
+// partner id (see dashboard "Referral link" / partner portal), resolved
+// and priced server-side via get_referral_discount so this page never has
+// to know or trust a discount amount on its own
+const REF_CODE = urlParams.get("ref") || null;
+
 const SIZES = {
   studio:{label:"Studio",crew:2,hours:3,lbs:1800},
   br1:{label:"1 bedroom",crew:2,hours:4,lbs:2600},
@@ -160,8 +166,8 @@ function estimate(input, s){
     const fuel = base*0.08; lines.push(["Fuel surcharge", fuel]); base+=fuel;
   }
   const r = (n)=>Math.round(n/25)*25;
-  return { low:r(base*0.9), high:r(base*1.12), lbs:size.lbs, crew:size.crew,
-    lines:lines.map(([l,v])=>[l,Math.round(v)]) };
+  return { low:Math.max(0,r(base*0.9)-referralDiscount), high:Math.max(0,r(base*1.12)-referralDiscount),
+    lbs:size.lbs, crew:size.crew, lines:lines.map(([l,v])=>[l,Math.round(v)]) };
 }
 function optChip(val,text,on){
   return `<button data-val="${val}" class="chip${on?" on":""}">${text}</button>`;
@@ -170,6 +176,7 @@ function markBad(el, ids){ ids.forEach(id=>{ const n=el.querySelector(id); if(n)
 function clearBad(el, ids){ ids.forEach(id=>{ const n=el.querySelector(id); if(n) n.style.borderColor=""; }); }
 
 let rates = null;
+let referralDiscount = 0;
 
 function header(){
   return `<header>
@@ -240,6 +247,7 @@ function renderForm(){
             <div style="border-top:2px dashed var(--line);padding-top:12px">
               <div class="label">Typical cost range</div>
               <div class="mono" style="font-size:30px;font-weight:700;letter-spacing:-.02em">${money(est.low)}<span class="muted"> – </span>${money(est.high)}</div>
+              ${referralDiscount>0?`<div class="mono" style="font-size:11px;margin-top:4px;color:var(--stamp)">🎉 Referral discount applied: −${money(referralDiscount)}</div>`:""}
               <div class="mono muted" style="font-size:10px;margin-top:4px">This is a general estimate for planning purposes and does not represent a price from PackUp. Your matched moving company will confirm final pricing.</div>
             </div>
           </div>
@@ -321,6 +329,7 @@ function renderForm(){
         p_access: q.access, p_packing: q.packing, p_notes: `Heard about us via: ${who.source}`,
         p_quote_low: est.low, p_quote_high: est.high, p_owner: BIZ_OWNER,
         p_utm_source: UTM_SOURCE, p_utm_medium: UTM_MEDIUM, p_utm_campaign: UTM_CAMPAIGN,
+        p_ref: REF_CODE,
       });
       if(error){ showErr("We were unable to submit your request. Please try again, or call us directly."); save.disabled=false; save.textContent="✓ SUBMIT REQUEST"; return; }
       renderThanks(est);
@@ -351,6 +360,10 @@ sb.rpc("log_page_view", { p_path: "request.html", p_owner: BIZ_OWNER }).then(()=
   const { data, error } = await sb.rpc("get_public_rates", { p_owner: BIZ_OWNER });
   if(error || !data || !data.length){ renderError("This quote form is not yet available. Please check back soon."); return; }
   rates = data[0];
+  if(REF_CODE){
+    const { data: discount } = await sb.rpc("get_referral_discount", { p_ref: REF_CODE, p_owner: BIZ_OWNER });
+    referralDiscount = Number(discount) || 0;
+  }
   renderForm();
 })();
 </script>
