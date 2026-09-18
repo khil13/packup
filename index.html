@@ -214,14 +214,11 @@ function renderForm(){
             ${Object.entries(SIZES).map(([k,v])=>optChip(k,v.label,q.home_size===k)).join("")}
           </div>
         </div>
-        <div class="grid2">
-          <div><div class="label">Move type</div><div class="row" data-grp="move_type">
-            ${optChip("local","LOCAL",q.move_type==="local")}
-            ${optChip("long","LONG",q.move_type==="long")}
-          </div></div>
-          <div><div class="label">Distance · ${q.miles} mi</div>
-            <input type="range" min="1" max="${q.move_type==="local"?60:3000}" value="${q.miles}" id="miles"/></div>
+        <div>
+          <div class="label">Distance · ${q.miles} mi</div>
+          <input type="range" min="1" max="60" value="${q.miles}" id="miles"/>
         </div>
+        <div class="mono muted" style="font-size:11px">Currently taking local New Jersey moves only — long-distance/out-of-state requests aren't available yet.</div>
         <div>
           <div class="label">Access</div>
           <div class="row" style="flex-wrap:wrap" data-grp="access">
