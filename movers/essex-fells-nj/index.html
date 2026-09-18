@@ -4,27 +4,27 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#E3D6BB" />
-<title>Movers in Irvington, NJ | PackUp</title>
-<meta name="description" content="Get a free moving cost estimate for a move in Irvington, NJ and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
+<title>Movers in Essex Fells, NJ | PackUp</title>
+<meta name="description" content="Get a free moving cost estimate for a move in Essex Fells, NJ and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Movers in Irvington, NJ | PackUp" />
-<meta property="og:description" content="Get a free moving cost estimate for a move in Irvington, NJ and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
-<meta property="og:url" content="https://packupleads.com/movers/irvington-nj/" />
+<meta property="og:title" content="Movers in Essex Fells, NJ | PackUp" />
+<meta property="og:description" content="Get a free moving cost estimate for a move in Essex Fells, NJ and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
+<meta property="og:url" content="https://packupleads.com/movers/essex-fells-nj/" />
 <meta name="twitter:card" content="summary" />
-<meta name="twitter:title" content="Movers in Irvington, NJ | PackUp" />
-<meta name="twitter:description" content="Get a free moving cost estimate for a move in Irvington, NJ and get matched with a licensed local moving company." />
+<meta name="twitter:title" content="Movers in Essex Fells, NJ | PackUp" />
+<meta name="twitter:description" content="Get a free moving cost estimate for a move in Essex Fells, NJ and get matched with a licensed local moving company." />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
   "name": "PackUp",
   "description": "PackUp is a referral service that matches you with a licensed, independent local moving company and does not perform moves itself.",
-  "url": "https://packupleads.com/movers/irvington-nj/",
+  "url": "https://packupleads.com/movers/essex-fells-nj/",
   "telephone": "+18622150984",
   "email": "packupleads@gmail.com",
   "areaServed": {
     "@type": "City",
-    "name": "Irvington",
+    "name": "Essex Fells",
     "containedInPlace": { "@type": "State", "name": "New Jersey" }
   }
 }
@@ -69,19 +69,19 @@
 <div class="wrap">
   <header>
     <h1>Pack<span style="color:var(--tapeDeep)">Up</span></h1>
-    <div class="label" style="margin-top:6px">Movers in Irvington, NJ</div>
+    <div class="label" style="margin-top:6px">Movers in Essex Fells, NJ</div>
   </header>
   <main class="stack5">
     <div class="card pad stack">
-      <h2>Moving in or out of Irvington?</h2>
-      <p>PackUp is a referral service — we don't perform moves ourselves. Tell us about your move and we'll connect you with an independent, licensed local moving company that serves Irvington, so you get one quote to compare instead of fielding calls from five different companies.</p>
+      <h2>Moving in or out of Essex Fells?</h2>
+      <p>PackUp is a referral service — we don't perform moves ourselves. Tell us about your move and we'll connect you with an independent, licensed local moving company that serves Essex Fells, so you get one quote to compare instead of fielding calls from five different companies.</p>
     </div>
     <div class="card pad" id="priceCard">
-      <div class="label">Typical local move cost near Irvington</div>
+      <div class="label">Typical local move cost near Essex Fells</div>
       <div id="prices"><div class="spin"></div></div>
       <p class="muted mono" style="font-size:10px;margin-top:10px">Based on current local rates for a short in-town move. Your actual quote depends on distance, access, and whether you need packing — get an exact estimate below.</p>
     </div>
-    <a class="btn btn-dark" id="cta" href="/?area=Irvington">GET YOUR FREE IRVINGTON MOVING QUOTE</a>
+    <a class="btn btn-dark" id="cta" href="/?area=Essex%20Fells">GET YOUR FREE ESSEX FELLS MOVING QUOTE</a>
     <p class="mono muted" style="font-size:11px;text-align:center">Also serving the rest of <a href="/movers/">Essex County, NJ</a></p>
   </main>
 </div>
@@ -89,7 +89,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============================================================
-   PackUp — Irvington, NJ landing page
+   PackUp — Essex Fells, NJ landing page
    Static content page; the actual quote flow lives at "/" (index.html).
    Prices shown here are computed live from the same public rates RPC
    index.html uses, so they can't drift from what the form itself quotes.
@@ -106,13 +106,13 @@ const money = (n) => "$" + Math.round(n||0).toLocaleString();
 // page's URL to the CTA, instead of guessing or overwriting it
 const cta = document.getElementById("cta");
 const ctaParams = new URLSearchParams();
-ctaParams.set("area", "Irvington");
+ctaParams.set("area", "Essex Fells");
 ["utm_source","utm_medium","utm_campaign","ref","biz"].forEach(k=>{
   const v = urlParams.get(k); if(v) ctaParams.set(k, v);
 });
 cta.href = "/?" + ctaParams.toString();
 
-sb.rpc("log_page_view", { p_path: "movers/irvington-nj", p_owner: BIZ_OWNER }).then(()=>{}, ()=>{});
+sb.rpc("log_page_view", { p_path: "movers/essex-fells-nj", p_owner: BIZ_OWNER }).then(()=>{}, ()=>{});
 
 // same local-move formula as index.html's estimate(), for a short (5 mi)
 // in-town move with no packing — a representative "typical" range per size
