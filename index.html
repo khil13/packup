@@ -185,6 +185,9 @@ function header(){
   </header>
   <div class="mono muted" style="font-size:11px;padding:16px 20px 0;line-height:1.5">
     PackUp is a referral service and does not perform moves. Please share a few details about your move, and we will connect you with an independent, licensed local moving company that will confirm final pricing.
+  </div>
+  <div class="mono muted" style="font-size:11px;padding:8px 20px 0">
+    Serving: <a href="/movers/">Essex County, NJ</a>
   </div>`;
 }
 
@@ -196,7 +199,7 @@ function renderError(msg){
 function renderForm(){
   const q = { home_size:"br2", move_type:"local", miles:12, access:"ground", packing:false };
   // honeypot — real visitors never see or fill this field
-  const who = { name:"", phone:"", email:"", area:"", source:SOURCES[0], trap:"" };
+  const who = { name:"", phone:"", email:"", area:urlParams.get("area")||"", source:SOURCES[0], trap:"" };
   let capturing = false;
 
   const draw = () => {

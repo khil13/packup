@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#E3D6BB" />
+<title>Movers in West Caldwell, NJ | PackUp</title>
+<meta name="description" content="Get a free moving cost estimate for a move in West Caldwell, NJ and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Movers in West Caldwell, NJ | PackUp" />
+<meta property="og:description" content="Get a free moving cost estimate for a move in West Caldwell, NJ and get matched with a licensed local moving company. No account needed, no bidding war — your request goes to one mover, not five." />
+<meta property="og:url" content="https://packupleads.com/movers/west-caldwell-nj/" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Movers in West Caldwell, NJ | PackUp" />
+<meta name="twitter:description" content="Get a free moving cost estimate for a move in West Caldwell, NJ and get matched with a licensed local moving company." />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "PackUp",
+  "description": "PackUp is a referral service that matches you with a licensed, independent local moving company and does not perform moves itself.",
+  "url": "https://packupleads.com/movers/west-caldwell-nj/",
+  "telephone": "+18622150984",
+  "email": "packupleads@gmail.com",
+  "areaServed": {
+    "@type": "City",
+    "name": "West Caldwell",
+    "containedInPlace": { "@type": "State", "name": "New Jersey" }
+  }
+}
+</script>
+<style>
+  :root{
+    --kraft:#E3D6BB; --kraftDeep:#D3C09C; --kraftLight:#EFE6D2;
+    --ink:#17150F; --ink60:#5C5647; --line:#B9A67E;
+    --tape:#F0821E; --tapeDeep:#C4630D; --stamp:#1F4D46; --void:#8C3A22;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--kraft);color:var(--ink);font-family:var(--sans)}
+  body{min-height:100vh;min-height:100dvh}
+  a{color:var(--tapeDeep)}
+  .tape{height:6px;background:var(--tape)}
+  .wrap{max-width:560px;margin:0 auto}
+  .pad{padding:20px}
+  .mono{font-family:var(--mono)}
+  .label{font-family:var(--mono);color:var(--ink60);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .card{background:var(--kraftLight);border:1px solid var(--line)}
+  .stack>*+*{margin-top:12px}
+  .stack5>*+*{margin-top:20px}
+  h1{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+  h2{font-size:16px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+  p{line-height:1.55}
+  .muted{color:var(--ink60)}
+  header{padding:24px 20px 16px;border-bottom:1px solid var(--line)}
+  main{padding:20px 20px 60px}
+  .priceRow{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .priceRow:last-child{border-bottom:none}
+  .btn{padding:16px;font-family:var(--mono);font-size:13px;letter-spacing:.08em;text-align:center;display:block;text-decoration:none}
+  .btn-dark{background:var(--ink);color:var(--kraft)}
+  .spin{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:sp .8s linear infinite;margin:8px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="tape"></div>
+<div class="wrap">
+  <header>
+    <h1>Pack<span style="color:var(--tapeDeep)">Up</span></h1>
+    <div class="label" style="margin-top:6px">Movers in West Caldwell, NJ</div>
+  </header>
+  <main class="stack5">
+    <div class="card pad stack">
+      <h2>Moving in or out of West Caldwell?</h2>
+      <p>PackUp is a referral service — we don't perform moves ourselves. Tell us about your move and we'll connect you with an independent, licensed local moving company that serves West Caldwell, so you get one quote to compare instead of fielding calls from five different companies.</p>
+    </div>
+    <div class="card pad" id="priceCard">
+      <div class="label">Typical local move cost near West Caldwell</div>
+      <div id="prices"><div class="spin"></div></div>
+      <p class="muted mono" style="font-size:10px;margin-top:10px">Based on current local rates for a short in-town move. Your actual quote depends on distance, access, and whether you need packing — get an exact estimate below.</p>
+    </div>
+    <a class="btn btn-dark" id="cta" href="/?area=West%20Caldwell">GET YOUR FREE WEST CALDWELL MOVING QUOTE</a>
+    <p class="mono muted" style="font-size:11px;text-align:center">Also serving the rest of <a href="/movers/">Essex County, NJ</a></p>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   PackUp — West Caldwell, NJ landing page
+   Static content page; the actual quote flow lives at "/" (index.html).
+   Prices shown here are computed live from the same public rates RPC
+   index.html uses, so they can't drift from what the form itself quotes.
+============================================================ */
+const SB_URL = "https://hkysddnwwdrabfakmmdk.supabase.co";
+const SB_KEY = "sb_publishable_fbJw86MrQjxIFb-0-lTMKw_9cWDWheP";
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+const urlParams = new URLSearchParams(location.search);
+const BIZ_OWNER = urlParams.get("biz") || null;
+const money = (n) => "$" + Math.round(n||0).toLocaleString();
+
+// carry through any real attribution (utm_*, ref, biz) already on this
+// page's URL to the CTA, instead of guessing or overwriting it
+const cta = document.getElementById("cta");
+const ctaParams = new URLSearchParams();
+ctaParams.set("area", "West Caldwell");
+["utm_source","utm_medium","utm_campaign","ref","biz"].forEach(k=>{
+  const v = urlParams.get(k); if(v) ctaParams.set(k, v);
+});
+cta.href = "/?" + ctaParams.toString();
+
+sb.rpc("log_page_view", { p_path: "movers/west-caldwell-nj", p_owner: BIZ_OWNER }).then(()=>{}, ()=>{});
+
+// same local-move formula as index.html's estimate(), for a short (5 mi)
+// in-town move with no packing — a representative "typical" range per size
+const SIZES = {
+  studio:{label:"Studio",crew:2,hours:3},
+  br1:{label:"1 bedroom",crew:2,hours:4},
+  br2:{label:"2 bedroom",crew:3,hours:6},
+  br3:{label:"3 bedroom",crew:4,hours:8},
+};
+function localEstimate(size, s){
+  const labor = size.crew * s.hourly_per_mover * size.hours;
+  const drive = Number(s.travel_fee);
+  const base = labor + drive;
+  const r = (n)=>Math.round(n/25)*25;
+  return { low:r(base*0.9), high:r(base*1.12) };
+}
+
+(async () => {
+  const { data, error } = await sb.rpc("get_public_rates", { p_owner: BIZ_OWNER });
+  const el = document.getElementById("prices");
+  if(error || !data || !data.length){
+    el.innerHTML = `<p class="muted" style="font-size:13px">Estimate temporarily unavailable — get your exact quote below.</p>`;
+    return;
+  }
+  const rates = data[0];
+  el.innerHTML = Object.values(SIZES).map(size=>{
+    const est = localEstimate(size, rates);
+    return `<div class="priceRow"><span>${size.label}</span><span class="mono">${money(est.low)}–${money(est.high)}</span></div>`;
+  }).join("");
+})();
+</script>
+</body>
+</html>
