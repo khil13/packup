@@ -320,6 +320,7 @@ function renderForm(){
       clearBad(app, ["#cPhone","#cEmail"]); msg.classList.add("hidden");
       const err = contactError(phone, email);
       if(err){ showErr(err); markBad(app, err.startsWith("That email")?["#cEmail"]:["#cPhone"]); return; }
+      if(!phone && !email){ showErr("Please enter a phone number or email so your matched mover can reach you."); markBad(app, ["#cPhone","#cEmail"]); return; }
 
       if(who.trap){ renderThanks(est); return; } // bot tripped the honeypot — pretend success, save nothing
 
