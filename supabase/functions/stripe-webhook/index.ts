@@ -35,35 +35,17 @@ Deno.serve(async (req) => {
         ? session.payment_intent
         : session.payment_intent?.id ?? session.id; // fall back to session id if no PI
 
-      // idempotency: a redelivered webhook must not double-credit the balance
-      const { data: existing } = await supabase
-        .from("wallet_transactions")
-        .select("id")
-        .eq("stripe_payment_intent_id", paymentIntentId)
-        .maybeSingle();
-
-      if (!existing) {
-        const { data: partner } = await supabase
-          .from("partners")
-          .select("balance_cents, owner")
-          .eq("id", partnerId)
-          .single();
-
-        if (partner) {
-          await supabase
-            .from("partners")
-            .update({ balance_cents: partner.balance_cents + cents })
-            .eq("id", partnerId);
-
-          await supabase.from("wallet_transactions").insert({
-            owner: partner.owner,
-            partner_id: partnerId,
-            amount_cents: cents,
-            kind: "topup",
-            stripe_payment_intent_id: paymentIntentId,
-          });
-        }
-      }
+      // credit_partner_wallet_from_stripe does the idempotency check (a
+      // unique index on stripe_payment_intent_id, not a racy select-then-
+      // insert) and the balance increment atomically in one statement, so a
+      // redelivered webhook or a concurrent lead charge can't double-credit
+      // or lose an update.
+      const { error: creditError } = await supabase.rpc("credit_partner_wallet_from_stripe", {
+        p_partner_id: partnerId,
+        p_amount_cents: cents,
+        p_payment_intent_id: paymentIntentId,
+      });
+      if (creditError) console.error("credit_partner_wallet_from_stripe failed", creditError);
     }
   }
 

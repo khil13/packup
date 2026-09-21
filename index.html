@@ -201,7 +201,7 @@ function renderError(msg){
 function renderForm(){
   const q = { home_size:"br2", move_type:"local", miles:12, access:"ground", packing:false };
   // honeypot — real visitors never see or fill this field
-  const who = { name:"", phone:"", email:"", area:urlParams.get("area")||"", source:SOURCES[0], trap:"" };
+  const who = { name:"", phone:"", email:"", area:urlParams.get("area")||"", pickup:"", destination:"", source:SOURCES[0], trap:"" };
   let capturing = false;
 
   const draw = () => {
@@ -283,6 +283,8 @@ function renderForm(){
         <div><div class="label">Area</div><input id="cArea" value="${esc(who.area)}" placeholder="Neighborhood"/></div>
       </div>
       <div><div class="label">Email</div><input id="cEmail" type="email" inputmode="email" value="${esc(who.email)}" placeholder="Optional"/></div>
+      <div><div class="label">Pickup address</div><input id="cPickup" value="${esc(who.pickup)}" placeholder="Street address, city"/></div>
+      <div><div class="label">Destination address</div><input id="cDest" value="${esc(who.destination)}" placeholder="Street address, city"/></div>
       <div><div class="label">How did you hear about us?</div><div class="row" id="cSrc" style="flex-wrap:wrap">
         ${SOURCES.map(s=>`<button data-src="${s}" class="chip${who.source===s?" on":""}">${s}</button>`).join("")}
       </div></div>
@@ -299,9 +301,10 @@ function renderForm(){
 
   function wireCapture(est){
     const save = app.querySelector("#cSave"); if(!save) return;
-    app.querySelectorAll("#cName,#cPhone,#cArea,#cEmail,#cTrap").forEach(inp=>{
+    app.querySelectorAll("#cName,#cPhone,#cArea,#cEmail,#cPickup,#cDest,#cTrap").forEach(inp=>{
       inp.oninput = ()=>{ who.name=app.querySelector("#cName").value; who.phone=app.querySelector("#cPhone").value;
         who.area=app.querySelector("#cArea").value; who.email=app.querySelector("#cEmail").value;
+        who.pickup=app.querySelector("#cPickup").value; who.destination=app.querySelector("#cDest").value;
         who.trap=app.querySelector("#cTrap").value; };
     });
     app.querySelectorAll("#cSrc [data-src]").forEach(b=>b.onclick=()=>{
@@ -317,9 +320,14 @@ function renderForm(){
       if(!who.name){ showErr("Please enter your name so we can prepare your match."); return; }
       const phone = app.querySelector("#cPhone").value.trim();
       const email = app.querySelector("#cEmail").value.trim();
-      clearBad(app, ["#cPhone","#cEmail"]); msg.classList.add("hidden");
+      const pickup = app.querySelector("#cPickup").value.trim();
+      const destination = app.querySelector("#cDest").value.trim();
+      clearBad(app, ["#cPhone","#cEmail","#cPickup","#cDest"]); msg.classList.add("hidden");
       const err = contactError(phone, email);
       if(err){ showErr(err); markBad(app, err.startsWith("That email")?["#cEmail"]:["#cPhone"]); return; }
+      if(!phone && !email){ showErr("Please enter a phone number or email so your matched mover can reach you."); markBad(app, ["#cPhone","#cEmail"]); return; }
+      if(!pickup){ showErr("Please enter a pickup address."); markBad(app, ["#cPickup"]); return; }
+      if(!destination){ showErr("Please enter a destination address."); markBad(app, ["#cDest"]); return; }
 
       if(who.trap){ renderThanks(est); return; } // bot tripped the honeypot — pretend success, save nothing
 
@@ -331,7 +339,7 @@ function renderForm(){
         p_access: q.access, p_packing: q.packing, p_notes: `Heard about us via: ${who.source}`,
         p_quote_low: est.low, p_quote_high: est.high, p_owner: BIZ_OWNER,
         p_utm_source: UTM_SOURCE, p_utm_medium: UTM_MEDIUM, p_utm_campaign: UTM_CAMPAIGN,
-        p_ref: REF_CODE,
+        p_ref: REF_CODE, p_pickup_address: pickup, p_destination_address: destination,
       });
       if(error){ showErr("We were unable to submit your request. Please try again, or call us directly."); save.disabled=false; save.textContent="✓ SUBMIT REQUEST"; return; }
       renderThanks(est);
