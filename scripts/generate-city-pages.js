@@ -23,6 +23,34 @@ const TOWNS = [
 const ROOT = path.join(__dirname, "..");
 const slug = (town) => town.toLowerCase().replace(/\s+/g, "-") + "-nj";
 
+// One verified, town-specific fact per page so the 22 near-identical
+// landing pages aren't pure duplicate content — also just a nicer read.
+// Keep each to one sentence.
+const FACTS = {
+  "Belleville": "Belleville was the site of the first steam engine in America — Josiah Hornblower brought it over in 1753 to pump water from the Schuyler copper mines.",
+  "Bloomfield": "Bloomfield is named for Revolutionary War hero General Joseph Bloomfield and was home to one of New Jersey's first schools, the Bloomfield Academy, in 1810.",
+  "Caldwell": "Caldwell is the birthplace of Grover Cleveland — the only U.S. president ever born in New Jersey.",
+  "Cedar Grove": "Cedar Grove split off from Verona Township in 1908 and took its name from the Eastern Red Cedar trees that once covered its hillsides.",
+  "East Orange": "East Orange's Central Avenue was once known as the \"Fifth Avenue of New Jersey\" for its bustling shopping district.",
+  "Essex Fells": "Essex Fells was laid out by the Suburban Land Company in the late 1800s as one of Essex County's first planned suburban communities.",
+  "Fairfield": "Fairfield is home to Essex County Airport, which opened in 1930 with an air show that drew roughly 40,000 spectators.",
+  "Glen Ridge": "Glen Ridge is still lit almost entirely by historic gas lamps — 667 of the roughly 3,000 remaining in the entire United States.",
+  "Irvington": "Irvington was known as Camptown until 1852, when it was renamed in honor of author Washington Irving.",
+  "Livingston": "Livingston is named for William Livingston, New Jersey's first governor and a framer of the U.S. Constitution.",
+  "Maplewood": "Maplewood's train station is a preserved 1902 Tudor-style depot and the third-busiest stop on NJ Transit's Morris & Essex Line.",
+  "Millburn": "Millburn is home to the Paper Mill Playhouse, New Jersey's official State Theatre and a 2016 Regional Theatre Tony Award winner.",
+  "Montclair": "Yankees legend Yogi Berra made Montclair his home for decades while raising his family.",
+  "Newark": "Newark's Branch Brook Park has the largest collection of cherry blossom trees in the United States — more than Washington, D.C.",
+  "North Caldwell": "A home in North Caldwell provided the exterior shots of the Soprano family's house on HBO's The Sopranos.",
+  "Nutley": "Nutley is the only town in the entire United States with that name, adopted in 1902 as the area grew out of what had been Franklin, New Jersey.",
+  "Orange": "Orange was once the hat-making capital of the United States, with 21 firms employing more than 3,700 people by 1892.",
+  "Roseland": "Roseland was once home to the Becker Farm Railroad, a working miniature railroad that ran from 1938 to 1972.",
+  "South Orange": "South Orange is home to Seton Hall University, the oldest diocesan Catholic university in the United States, founded in 1856.",
+  "Verona": "Verona Park's 13-acre lake was designed by the Olmsted Brothers, the same firm behind Central Park and Newark's Branch Brook Park.",
+  "West Caldwell": "West Caldwell was once prescribed by 19th-century physicians as a \"pure air\" health retreat.",
+  "West Orange": "West Orange is home to Thomas Edison's research lab and estate, preserved today as Thomas Edison National Historical Park with over 300,000 artifacts.",
+};
+
 function cityPage(town) {
   const path = `movers/${slug(town)}/`;
   return `<!DOCTYPE html>
@@ -102,6 +130,10 @@ function cityPage(town) {
     <div class="card pad stack">
       <h2>Moving in or out of ${town}?</h2>
       <p>PackUp is a referral service — we don't perform moves ourselves. Tell us about your move and we'll connect you with an independent, licensed local moving company that serves ${town}, so you get one quote to compare instead of fielding calls from five different companies.</p>
+    </div>
+    <div class="card pad">
+      <div class="label">Local fact</div>
+      <p class="muted" style="font-size:13px">${FACTS[town] || `${town} is one of the towns we match movers to every week.`}</p>
     </div>
     <div class="card pad" id="priceCard">
       <div class="label">Typical local move cost near ${town}</div>
