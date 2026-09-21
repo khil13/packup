@@ -578,6 +578,8 @@ function leadDetail(id){
             <div class="mono muted" style="font-size:11px;margin-top:4px">${esc(l.area||"Area not set")} · via ${esc(l.source||"unknown")}</div>
             ${l.phone?`<div class="mono muted" style="font-size:11px;margin-top:2px">${esc(l.phone)}</div>`:""}
             ${l.email?`<div class="mono muted" style="font-size:11px;margin-top:2px">${esc(l.email)}</div>`:""}
+            ${l.pickup_address?`<div class="mono muted" style="font-size:11px;margin-top:2px">From: ${esc(l.pickup_address)}</div>`:""}
+            ${l.destination_address?`<div class="mono muted" style="font-size:11px;margin-top:2px">To: ${esc(l.destination_address)}</div>`:""}
             ${l.referred_by_id?`<div class="mono muted" style="font-size:11px;margin-top:2px;color:var(--stamp)">Came via a ${l.referred_by_type} referral · $${l.referral_discount_applied||0} off</div>`:""}
           </div>
           ${stageTag(l.stage)}
@@ -685,7 +687,8 @@ function leadDetail(id){
   };
 
   const edit = () => {
-    const d = { name:l.name, phone:l.phone||"", email:l.email||"", area:l.area||"", source:l.source||"Google",
+    const d = { name:l.name, phone:l.phone||"", email:l.email||"", area:l.area||"",
+      pickup_address:l.pickup_address||"", destination_address:l.destination_address||"", source:l.source||"Google",
       home_size:l.home_size||"br2", move_type:l.move_type||"local", miles:l.miles||12,
       access:l.access||"ground", packing:!!l.packing };
 
@@ -701,6 +704,8 @@ function leadDetail(id){
             <div><div class="label">Area</div><input id="e_area" value="${esc(d.area)}" placeholder="Neighborhood"/></div>
           </div>
           <div><div class="label">Email</div><input id="e_email" type="email" inputmode="email" value="${esc(d.email)}" placeholder="name@email.com"/></div>
+          <div><div class="label">Pickup address</div><input id="e_pickup" value="${esc(d.pickup_address)}" placeholder="Street address, city"/></div>
+          <div><div class="label">Destination address</div><input id="e_dest" value="${esc(d.destination_address)}" placeholder="Street address, city"/></div>
           <div><div class="label">Found you via</div><div class="row" data-grp="source" style="flex-wrap:wrap">
             ${SOURCES.map(s=>optChip("source",s,s,d.source===s)).join("")}
           </div></div>
@@ -735,6 +740,7 @@ function leadDetail(id){
       const keepText = () => {
         d.name=el.querySelector("#e_name").value; d.phone=el.querySelector("#e_phone").value;
         d.area=el.querySelector("#e_area").value; d.email=el.querySelector("#e_email").value;
+        d.pickup_address=el.querySelector("#e_pickup").value; d.destination_address=el.querySelector("#e_dest").value;
       };
       el.querySelector("#cancel").onclick = () => { editing=false; view(); };
       const mi = el.querySelector("#e_miles");
@@ -752,12 +758,14 @@ function leadDetail(id){
       el.querySelector("#e_save").onclick = async () => {
         keepText();
         d.name=d.name.trim(); d.phone=d.phone.trim(); d.area=d.area.trim(); d.email=d.email.trim();
+        d.pickup_address=d.pickup_address.trim(); d.destination_address=d.destination_address.trim();
         if(!d.name){ toast("A name is needed."); return; }
         clearBad(el, ["#e_phone","#e_email"]);
         const err = contactError(d.phone, d.email);
         if(err){ toast(err); markBad(el, err.startsWith("That email")?["#e_email"]:["#e_phone"]); return; }
         const est2 = estimate(d, settings);
-        const patch = { name:d.name, phone:d.phone, email:d.email, area:d.area, source:d.source,
+        const patch = { name:d.name, phone:d.phone, email:d.email, area:d.area,
+          pickup_address:d.pickup_address||null, destination_address:d.destination_address||null, source:d.source,
           home_size:d.home_size, move_type:d.move_type, miles:d.miles, access:d.access,
           packing:d.packing, quote_low:est2.low, quote_high:est2.high };
         el.querySelector("#e_save").disabled = true;

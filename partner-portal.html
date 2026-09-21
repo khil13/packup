@@ -175,6 +175,8 @@ async function renderDashboard(){
               <span class="stagetag" style="background:${STAGE_COLOR[l.stage]||"#5C5647"}">${esc(l.stage||"")}</span>
             </div>
             <div class="mono" style="font-size:12px;margin-top:8px">${l.phone?esc(l.phone):""}${l.phone&&l.email?" · ":""}${l.email?esc(l.email):""}</div>
+            ${l.pickup_address?`<div class="mono muted" style="font-size:11px;margin-top:4px">From: ${esc(l.pickup_address)}</div>`:""}
+            ${l.destination_address?`<div class="mono muted" style="font-size:11px;margin-top:2px">To: ${esc(l.destination_address)}</div>`:""}
             ${l.sent_at?`<div class="mono muted" style="font-size:10px;margin-top:4px">Sent ${new Date(l.sent_at).toLocaleDateString()}${l.charged_cents?` · ${money(l.charged_cents)}`:""}</div>`:""}
           </div>`).join("") : `<p class="muted" style="font-size:13px">No leads yet.</p>`}
         </div>
