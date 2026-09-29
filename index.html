@@ -291,7 +291,7 @@ function renderForm(){
       </div>
       <div><div class="label">Email</div><input id="cEmail" type="email" inputmode="email" value="${esc(who.email)}" placeholder="Optional"/></div>
       <div><div class="label">Pickup address</div><input id="cPickup" value="${esc(who.pickup)}" placeholder="Street address, city"/></div>
-      <div><div class="label">Destination address</div><input id="cDest" value="${esc(who.destination)}" placeholder="Street address, city"/></div>
+      <div><div class="label">Destination</div><input id="cDest" value="${esc(who.destination)}" placeholder="Street address, or just the town if you don't know yet"/></div>
       <div><div class="label">How did you hear about us?</div><div class="row" id="cSrc" style="flex-wrap:wrap">
         ${SOURCES.map(s=>`<button data-src="${s}" class="chip${who.source===s?" on":""}">${s}</button>`).join("")}
       </div></div>
@@ -334,7 +334,7 @@ function renderForm(){
       if(err){ showErr(err); markBad(app, err.startsWith("That email")?["#cEmail"]:["#cPhone"]); return; }
       if(!phone && !email){ showErr("Please enter a phone number or email so your matched mover can reach you."); markBad(app, ["#cPhone","#cEmail"]); return; }
       if(!pickup){ showErr("Please enter a pickup address."); markBad(app, ["#cPickup"]); return; }
-      if(!destination){ showErr("Please enter a destination address."); markBad(app, ["#cDest"]); return; }
+      if(!destination){ showErr("Please enter a destination — a town name is fine if you don't have the exact address yet."); markBad(app, ["#cDest"]); return; }
 
       if(who.trap){ renderThanks(est); return; } // bot tripped the honeypot — pretend success, save nothing
 
